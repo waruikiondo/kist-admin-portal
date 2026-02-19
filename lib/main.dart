@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // NEW: Added this for web detection
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -17,11 +18,18 @@ void main() async {
     anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE', // REMEMBER TO PASTE YOUR KEY
   );
 
-  // 2. Initialize Isar (Local)
-  final dir = await getApplicationDocumentsDirectory();
+  // 2. Initialize Isar (Local / Web)
+  String dirPath = ''; 
+  
+  // NEW: Only look for the computer's Documents folder if we are NOT on the web
+  if (!kIsWeb) {
+    final dir = await getApplicationDocumentsDirectory();
+    dirPath = dir.path;
+  }
+
   final isar = await Isar.open(
     [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
-    directory: dir.path,
+    directory: dirPath, // Web safely ignores this empty string
   );
 
   runApp(
