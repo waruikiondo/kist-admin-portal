@@ -1,43 +1,60 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // NEW: Added this for web detection
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:uuid/uuid.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'data/schemas.dart';
-import 'services/supabase_service.dart';
+
+// --- DATA MODELS ---
+class Tool {
+  final String id;
+  final String name;
+  final String category;
+  bool isAvailable;
+
+  Tool({required this.id, required this.name, required this.category, this.isAvailable = true});
+}
+
+class Student {
+  final String admNumber;
+  final String name;
+  final String? groupName;
+
+  Student({required this.admNumber, required this.name, this.groupName});
+}
+
+class LabGroup {
+  final String name;
+  LabGroup({required this.name});
+}
+
+class TransactionLog {
+  final int id;
+  final String toolName;
+  final String issuedTo;
+  final bool isGroupIssue;
+  final DateTime timeBorrowed;
+
+  TransactionLog({
+    required this.id,
+    required this.toolName,
+    required this.issuedTo,
+    this.isGroupIssue = false,
+    required this.timeBorrowed,
+  });
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Initialize Supabase (Cloud)
+  // 1. Initialize Supabase (Cloud) - THE ONLY DATABASE WE NEED
   await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL_HERE', // REMEMBER TO PASTE YOUR URL
-    anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE', // REMEMBER TO PASTE YOUR KEY
-  );
-
-  // 2. Initialize Isar (Local / Web)
-  String dirPath = ''; 
-  
-  // NEW: Only look for the computer's Documents folder if we are NOT on the web
-  if (!kIsWeb) {
-    final dir = await getApplicationDocumentsDirectory();
-    dirPath = dir.path;
-  }
-
-  final isar = await Isar.open(
-    [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
-    directory: dirPath, // Web safely ignores this empty string
+    url: 'YOUR_SUPABASE_URL_HERE', 
+    anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE', 
   );
 
   runApp(
     MultiProvider(
       providers: [
-        Provider<Isar>.value(value: isar),
-        Provider<SupabaseService>(create: (_) => SupabaseService()),
-        ChangeNotifierProvider(create: (_) => LabState(isar, SupabaseService())),
+        ChangeNotifierProvider(create: (_) => LabState()),
       ],
       child: const KistLabApp(),
     ),
@@ -65,83 +82,105 @@ class KistLabApp extends StatelessWidget {
 
 // --- STATE MANAGEMENT (The Brain) ---
 class LabState extends ChangeNotifier {
-  final Isar isar;
-  final SupabaseService supabaseService;
+  final _supabase = Supabase.instance.client;
   
   List<Tool> tools = [];
   List<Student> students = [];
-  List<LabGroup> groups = [];
+  List<LabGroup> groups = [
+    LabGroup(name: "Bench 1"),
+    LabGroup(name: "Bench 2"),
+    LabGroup(name: "Bench 3"),
+    LabGroup(name: "Bench 4"),
+  ];
   List<TransactionLog> activeLoans = [];
-  
-  // LIVE QUEUE
   List<Map<String, dynamic>> pendingRequests = [];
 
-  // The "Cart"
   Student? selectedStudent;
   LabGroup? selectedGroup;
   List<Tool> selectedTools = [];
 
-  LabState(this.isar, this.supabaseService) {
+  LabState() {
     _init();
   }
 
   void _init() async {
     await refresh();
     
-    // IF EMPTY: Add dummy data for KIST Demo
+    // Auto-seed Supabase if empty (For KIST Demo)
     if (tools.isEmpty) {
-      await isar.writeTxn(() async {
-        // Dummy Groups
-        await isar.labGroups.putAll([
-          LabGroup(name: "Bench 1"),
-          LabGroup(name: "Bench 2"),
-          LabGroup(name: "Bench 3"),
-        ]);
-        // Dummy Students
-        await isar.students.putAll([
-          Student(admNumber: "MECH/2026/001", name: "Kamau John", groupName: "Bench 1"),
-          Student(admNumber: "MECH/2026/002", name: "Wanjiku Grace", groupName: "Bench 1"),
-          Student(admNumber: "MECH/2026/003", name: "Otieno Brian", groupName: "Bench 2"),
-        ]);
-        // Dummy Tools
-        await isar.tools.putAll([
-          Tool(uuid: const Uuid().v4(), name: "Fluke Multimeter", category: "Electrical"),
-          Tool(uuid: const Uuid().v4(), name: "Screwdriver Set", category: "Hand"),
-          Tool(uuid: const Uuid().v4(), name: "Soldering Station", category: "Electrical"),
-          Tool(uuid: const Uuid().v4(), name: "Wire Stripper", category: "Hand"),
-        ]);
-      });
+      await _supabase.from('tools').insert([
+        {'uuid': '1', 'name': 'Fluke Multimeter', 'category': 'Electrical', 'is_available': true},
+        {'uuid': '2', 'name': 'Screwdriver Set', 'category': 'Hand', 'is_available': true},
+        {'uuid': '3', 'name': 'Soldering Station', 'category': 'Electrical', 'is_available': true},
+        {'uuid': '4', 'name': 'Wire Stripper', 'category': 'Hand', 'is_available': true},
+      ]);
+      await _supabase.from('students').insert([
+        {'adm_number': 'MECH/2026/001', 'name': 'Kamau John'},
+        {'adm_number': 'MECH/2026/002', 'name': 'Wanjiku Grace'},
+        {'adm_number': 'MECH/2026/003', 'name': 'Otieno Brian'},
+      ]);
       await refresh();
     }
 
-    // START LISTENING TO QR CODE REQUESTS LIVE
     listenToLiveQueue();
   }
 
   void listenToLiveQueue() {
-    supabaseService.liveToolRequests.listen((data) {
+    _supabase
+        .from('tool_requests')
+        .stream(primaryKey: ['id'])
+        .eq('status', 'PENDING')
+        .order('created_at', ascending: true)
+        .listen((data) {
       pendingRequests = data;
       notifyListeners();
     });
   }
 
   Future<void> refresh() async {
-    tools = await isar.tools.where().findAll();
-    students = await isar.students.where().findAll();
-    groups = await isar.labGroups.where().findAll();
-    activeLoans = await isar.transactionLogs.filter().isReturnedEqualTo(false).sortByTimeBorrowedDesc().findAll();
-    notifyListeners();
+    try {
+      final toolsData = await _supabase.from('tools').select().order('name');
+      tools = toolsData.map((t) => Tool(
+        id: t['id'].toString(),
+        name: t['name'],
+        category: t['category'] ?? 'General',
+        isAvailable: t['is_available'] ?? true,
+      )).toList();
+
+      final studentsData = await _supabase.from('students').select().order('name');
+      students = studentsData.map((s) => Student(
+        admNumber: s['adm_number'],
+        name: s['name'],
+      )).toList();
+
+      final loansData = await _supabase.from('transaction_logs')
+          .select()
+          .eq('is_returned', false)
+          .order('time_borrowed', ascending: false);
+          
+      activeLoans = loansData.map((l) => TransactionLog(
+        id: l['id'],
+        toolName: l['tool_name'],
+        issuedTo: l['issued_to'] ?? l['student_name'] ?? 'Unknown',
+        isGroupIssue: l['is_group_issue'] ?? false,
+        timeBorrowed: DateTime.parse(l['time_borrowed']),
+      )).toList();
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Error fetching data: $e");
+    }
   }
 
   void selectStudent(Student s) {
     selectedStudent = s;
-    selectedGroup = null; // Clear group if student is selected
+    selectedGroup = null; 
     notifyListeners();
   }
 
   void selectGroup(LabGroup g) {
     selectedGroup = g;
-    selectedStudent = null; // Clear student if group is selected
+    selectedStudent = null; 
     notifyListeners();
   }
 
@@ -154,30 +193,26 @@ class LabState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // STANDARD ISSUE (Manual)
   Future<void> issueTools() async {
     if ((selectedStudent == null && selectedGroup == null) || selectedTools.isEmpty) return;
 
     final issuedToName = selectedStudent?.name ?? selectedGroup?.name ?? 'Unknown';
     final isGroup = selectedGroup != null;
 
-    await isar.writeTxn(() async {
-      for (var tool in selectedTools) {
-        tool.isAvailable = false;
-        await isar.tools.put(tool);
-        
-        final log = TransactionLog(
-          toolName: tool.name,
-          issuedTo: issuedToName,
-          isGroupIssue: isGroup,
-          timeBorrowed: DateTime.now(),
-        );
-        await isar.transactionLogs.put(log);
-        
-        // Tell Cloud (Silent background sync)
-        supabaseService.logTransaction(log);
-      }
-    });
+    for (var tool in selectedTools) {
+      tool.isAvailable = false; 
+      
+      await _supabase.from('transaction_logs').insert({
+        'tool_name': tool.name,
+        'issued_to': issuedToName,
+        'is_group_issue': isGroup,
+        'time_borrowed': DateTime.now().toIso8601String(),
+        'is_returned': false,
+        'status': 'GOOD'
+      });
+      
+      await _supabase.from('tools').update({'is_available': false}).eq('id', tool.id);
+    }
 
     selectedStudent = null;
     selectedGroup = null;
@@ -185,50 +220,35 @@ class LabState extends ChangeNotifier {
     await refresh();
   }
 
-  // APPROVE LIVE QR REQUEST
   Future<void> approveQRRequest(Map<String, dynamic> request) async {
-    // 1. Mark as Issued in Cloud instantly
-    await supabaseService.approveRequest(request['id']);
+    await _supabase.from('tool_requests').update({'status': 'ISSUED'}).eq('id', request['id']);
     
-    // 2. We will auto-issue the tools locally if we have them
     final List requestedTools = request['tools_requested'] ?? [];
-    
-    await isar.writeTxn(() async {
-      for (var reqTool in requestedTools) {
-        final toolName = reqTool['tool'];
-        
-        // Find an available tool matching the requested name
-        final localTool = await isar.tools.filter().nameEqualTo(toolName).isAvailableEqualTo(true).findFirst();
-        
-        if (localTool != null) {
-          localTool.isAvailable = false;
-          await isar.tools.put(localTool);
-          
-          await isar.transactionLogs.put(TransactionLog(
-            toolName: localTool.name,
-            issuedTo: request['student_name'] + " (QR)",
-            isGroupIssue: false,
-            timeBorrowed: DateTime.now(),
-          ));
-        }
+    for (var reqTool in requestedTools) {
+      final toolName = reqTool['tool'];
+      final tool = tools.firstWhere((t) => t.name == toolName && t.isAvailable, orElse: () => Tool(id: '', name: '', category: ''));
+      
+      if (tool.id.isNotEmpty) {
+        await _supabase.from('transaction_logs').insert({
+          'tool_name': tool.name,
+          'issued_to': request['student_name'] + " (QR)",
+          'is_group_issue': false,
+          'time_borrowed': DateTime.now().toIso8601String(),
+          'is_returned': false,
+          'status': 'GOOD'
+        });
+        await _supabase.from('tools').update({'is_available': false}).eq('id', tool.id);
       }
-    });
-    
+    }
     await refresh();
   }
 
   Future<void> returnItem(TransactionLog log) async {
-    await isar.writeTxn(() async {
-      log.isReturned = true;
-      log.timeReturned = DateTime.now();
-      await isar.transactionLogs.put(log);
-
-      final tool = await isar.tools.filter().nameEqualTo(log.toolName).findFirst();
-      if (tool != null) {
-        tool.isAvailable = true;
-        await isar.tools.put(tool);
-      }
-    });
+    await _supabase.from('transaction_logs')
+        .update({'is_returned': true, 'time_returned': DateTime.now().toIso8601String()})
+        .eq('id', log.id);
+        
+    await _supabase.from('tools').update({'is_available': true}).eq('name', log.toolName);
     await refresh();
   }
 }
@@ -266,7 +286,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       body: TabBarView(
         controller: _tabController,
         children: const [
-          SelectionPanel(), // Has Live Queue, Students, Groups
+          SelectionPanel(), 
           ToolGridPanel(),
           ActionPanel(),
         ],
@@ -323,7 +343,7 @@ class DesktopLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Row(
       children: [
-        Expanded(flex: 3, child: SelectionPanel()), // Expanded to fit tabs
+        Expanded(flex: 3, child: SelectionPanel()), 
         VerticalDivider(width: 1),
         Expanded(flex: 5, child: ToolGridPanel()),
         VerticalDivider(width: 1),
@@ -333,7 +353,6 @@ class DesktopLayout extends StatelessWidget {
   }
 }
 
-// PANEL 1: SELECTION (Live Queue, Students, Groups)
 class SelectionPanel extends StatelessWidget {
   const SelectionPanel({super.key});
 
@@ -363,7 +382,6 @@ class SelectionPanel extends StatelessWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  // TAB 1: LIVE QR QUEUE
                   state.pendingRequests.isEmpty
                       ? Center(
                           child: Column(
@@ -397,13 +415,12 @@ class SelectionPanel extends StatelessWidget {
                           },
                         ),
 
-                  // TAB 2: STUDENTS
                   ListView.builder(
                     padding: const EdgeInsets.all(8),
                     itemCount: state.students.length,
                     itemBuilder: (context, index) {
                       final student = state.students[index];
-                      final isSelected = state.selectedStudent?.id == student.id;
+                      final isSelected = state.selectedStudent?.admNumber == student.admNumber;
                       return ListTile(
                         title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                         subtitle: Text("${student.admNumber} • ${student.groupName ?? ''}"),
@@ -419,13 +436,12 @@ class SelectionPanel extends StatelessWidget {
                     },
                   ),
 
-                  // TAB 3: GROUPS
                   ListView.builder(
                     padding: const EdgeInsets.all(8),
                     itemCount: state.groups.length,
                     itemBuilder: (context, index) {
                       final group = state.groups[index];
-                      final isSelected = state.selectedGroup?.id == group.id;
+                      final isSelected = state.selectedGroup?.name == group.name;
                       return ListTile(
                         title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                         leading: Icon(Icons.workspaces, color: isSelected ? const Color(0xFF003366) : Colors.grey),
@@ -445,7 +461,6 @@ class SelectionPanel extends StatelessWidget {
   }
 }
 
-// PANEL 2: TOOLS (Unchanged logic, just UI tweaks)
 class ToolGridPanel extends StatelessWidget {
   const ToolGridPanel({super.key});
   @override
@@ -505,20 +520,17 @@ class ToolGridPanel extends StatelessWidget {
   }
 }
 
-// PANEL 3: ACTIONS
 class ActionPanel extends StatelessWidget {
   const ActionPanel({super.key});
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
     
-    // Determine who is receiving the tools
     final receiverName = state.selectedStudent?.name ?? state.selectedGroup?.name;
     final isGroup = state.selectedGroup != null;
 
     return Column(
       children: [
-        // CART AREA
         Expanded(
           flex: 2,
           child: Container(
@@ -565,7 +577,6 @@ class ActionPanel extends StatelessWidget {
             ),
           ),
         ),
-        // ACTIVE LOANS LIST
         Expanded(
           flex: 3,
           child: Container(
