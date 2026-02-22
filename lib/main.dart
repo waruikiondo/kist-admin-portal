@@ -44,22 +44,23 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => LabState())],
-      child: const KistLabApp(),
+      child: const KinapLabApp(),
     ),
   );
 }
 
-class KistLabApp extends StatelessWidget {
-  const KistLabApp({super.key});
+class KinapLabApp extends StatelessWidget {
+  const KinapLabApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'KIST Lab Ledger',
+      title: 'KINAP Lab Ledger',
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF003366)),
+        // BRANDING: Updated to KINAP Red
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD32F2F)),
         scaffoldBackgroundColor: const Color(0xFFF0F2F5),
       ),
       home: const DashboardScreen(),
@@ -84,7 +85,11 @@ class LabState extends ChangeNotifier {
   final admCtrl = TextEditingController();
   final classCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
-  final keyCtrl = TextEditingController();
+  
+  // LOCKER KEY CONTROLLERS
+  final keyCtrl = TextEditingController(); // For Manual Issue
+  final reviewKeyCtrl = TextEditingController(); // For QR Review Assignment
+
   List<ManualItemCtrl> manualItems = [ManualItemCtrl()];
 
   StreamSubscription? _requestSubscription;
@@ -180,7 +185,10 @@ class LabState extends ChangeNotifier {
   void selectRequestForReview(Map<String, dynamic> request) {
     selectedRequest = request;
     selectedToolsToApprove = (request['tools_requested'] ?? []).map<String>((t) => t['tool'].toString()).toSet();
-    isManualFormActive = false; selectedReturnBorrower = null; notifyListeners();
+    isManualFormActive = false; 
+    selectedReturnBorrower = null; 
+    reviewKeyCtrl.clear(); // Clear the key assignment input
+    notifyListeners();
   }
 
   void activateManualForm() {
@@ -215,19 +223,27 @@ class LabState extends ChangeNotifier {
     
     pendingRequests.removeWhere((req) => req['id'] == request['id']);
     
+    // Process tools and inject the specific Locker Key Tag if assigned
+    List<String> finalToolsToIssue = [];
     for (var tool in selectedToolsToApprove) {
-      activeLoans.insert(0, TransactionLog(toolName: tool, issuedTo: "${request['student_name']} (${request['adm_number'] ?? 'QR'})", timeBorrowed: DateTime.now(), contactInfo: request['phone_number']));
+      if (tool == 'Locker Key' && reviewKeyCtrl.text.trim().isNotEmpty) {
+        finalToolsToIssue.add('Locker Key: ${reviewKeyCtrl.text.trim().toUpperCase()}');
+      } else {
+        finalToolsToIssue.add(tool);
+      }
     }
 
-    _executeOrQueue('tool_requests', 'UPDATE', {'data': {'status': 'ISSUED'}, 'col': 'id', 'val': request['id']});
-    for (var toolName in selectedToolsToApprove) {
+    for (var toolName in finalToolsToIssue) {
+      activeLoans.insert(0, TransactionLog(toolName: toolName, issuedTo: "${request['student_name']} (${request['adm_number'] ?? 'QR'})", timeBorrowed: DateTime.now(), contactInfo: request['phone_number']));
       _executeOrQueue('transaction_logs', 'INSERT', {
         'tool_name': toolName, 'student_name': request['student_name'], 'issued_to': "${request['student_name']} (${request['adm_number'] ?? 'QR'})",
         'contact_info': request['phone_number'], 'time_borrowed': DateTime.now().toIso8601String(), 'is_returned': false, 'status': 'GOOD' 
       });
     }
+
+    _executeOrQueue('tool_requests', 'UPDATE', {'data': {'status': 'ISSUED'}, 'col': 'id', 'val': request['id']});
     
-    selectedRequest = null; selectedToolsToApprove.clear(); notifyListeners();
+    selectedRequest = null; selectedToolsToApprove.clear(); reviewKeyCtrl.clear(); notifyListeners();
   }
 
   Future<void> submitManualForm() async {
@@ -235,7 +251,7 @@ class LabState extends ChangeNotifier {
     final studentName = nameCtrl.text.trim();
     final admNumber = admCtrl.text.trim();
     final phone = phoneCtrl.text.trim();
-    final lockerKey = keyCtrl.text.trim();
+    final lockerKey = keyCtrl.text.trim().toUpperCase();
     
     List<String> itemsToIssue = [];
     if (lockerKey.isNotEmpty) itemsToIssue.add("Locker Key: $lockerKey");
@@ -278,7 +294,7 @@ class LabState extends ChangeNotifier {
 
   Future<void> sendSMSReminder(String? phone, String borrowerName) async {
     if (phone == null || phone.isEmpty) return;
-    final Uri smsUri = Uri.parse('sms:$phone?body=Hello $borrowerName, you still have unreturned tools belonging to the KIST Mechatronics Lab. Please return them immediately. Thank you.');
+    final Uri smsUri = Uri.parse('sms:$phone?body=Hello $borrowerName, you still have unreturned items belonging to the KINAP Lab. Please return them immediately. Thank you.');
     if (await canLaunchUrl(smsUri)) await launchUrl(smsUri);
   }
 
@@ -294,23 +310,23 @@ class LabState extends ChangeNotifier {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('KIST Mechatronics Lab', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
-              pw.Text('Unreturned Tools Liability Report', style: const pw.TextStyle(fontSize: 18, color: PdfColors.red)),
+              pw.Text('KINAP Lab Ledger', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              pw.Text('Unreturned Items Liability Report', style: const pw.TextStyle(fontSize: 18, color: PdfColors.red)),
               pw.SizedBox(height: 10),
               pw.Text('Generated: ${DateTime.now().toString().split('.')[0]}'),
               pw.SizedBox(height: 20),
               pw.TableHelper.fromTextArray(
-                headers: ['Student Details', 'Contact', 'Tools Still Owed'],
+                headers: ['Student Details', 'Contact', 'Items Still Owed'],
                 data: groupedLoans.entries.map((e) => [e.key, e.value.first.contactInfo ?? 'N/A', e.value.map((l) => "• ${l.toolName}").join("\n")]).toList(),
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColors.blue900),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.red900),
               ),
             ],
           );
         },
       ),
     );
-    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: 'Missing_Tools_Report.pdf');
+    await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: 'KINAP_Missing_Items_Report.pdf');
   }
 
   @override
@@ -318,7 +334,7 @@ class LabState extends ChangeNotifier {
     _requestSubscription?.cancel();
     _ledgerSyncChannel?.unsubscribe();
     _syncTimer?.cancel();
-    nameCtrl.dispose(); admCtrl.dispose(); classCtrl.dispose(); phoneCtrl.dispose(); keyCtrl.dispose();
+    nameCtrl.dispose(); admCtrl.dispose(); classCtrl.dispose(); phoneCtrl.dispose(); keyCtrl.dispose(); reviewKeyCtrl.dispose();
     for (var item in manualItems) { item.dispose(); }
     super.dispose();
   }
@@ -340,7 +356,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     _mobileTabCtrl = TabController(length: 3, vsync: this);
   }
 
-  // NEW: Centralized Navigation Method
   void _navigateToTab(int index) {
     if (_mobileTabCtrl.index != index) {
       _mobileTabCtrl.animateTo(index);
@@ -356,7 +371,14 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       appBar: AppBar(
         title: Row(
           children: [
-            const Text("KIST Ledger", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            // BRANDING: KINAP Logo in AppBar wrapped in a white pill for visibility
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+              child: Image.asset('assets/kinap.png', height: 28),
+            ),
+            const SizedBox(width: 12),
+            const Text("Lab Admin", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1)),
             const SizedBox(width: 10),
             if (state.pendingOfflineActions > 0)
               Chip(
@@ -367,7 +389,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               )
           ],
         ),
-        backgroundColor: const Color(0xFF003366),
+        backgroundColor: const Color(0xFFD32F2F), // KINAP Red
         actions: [
           IconButton(onPressed: () => context.read<LabState>().refresh(), icon: const Icon(Icons.refresh, color: Colors.white))
         ],
@@ -390,10 +412,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
               ],
             ),
       bottomNavigationBar: isDesktop ? null : Container(
-        color: const Color(0xFF003366),
+        color: const Color(0xFFD32F2F),
         child: TabBar(
           controller: _mobileTabCtrl,
-          indicatorColor: Colors.orange,
+          indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white54,
           tabs: const [
@@ -407,7 +429,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   }
 }
 
-// --- QUICK SUMMARY DIALOG FOR END OF LAB ---
 void showEndTrackerDialog(BuildContext context, LabState state) {
   final groupedLoans = <String, List<TransactionLog>>{};
   for (var loan in state.activeLoans) { groupedLoans.putIfAbsent(loan.issuedTo, () => []).add(loan); }
@@ -415,12 +436,12 @@ void showEndTrackerDialog(BuildContext context, LabState state) {
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text("End of Lab Tracker", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003366))),
+      title: const Text("End of Lab Tracker", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
       content: SizedBox(
         width: double.maxFinite,
         height: 400,
         child: groupedLoans.isEmpty 
-          ? const Center(child: Text("All tools and keys returned. Great job!", style: TextStyle(color: Colors.green, fontSize: 18)))
+          ? const Center(child: Text("All items returned. Great job!", style: TextStyle(color: Colors.green, fontSize: 18)))
           : ListView(
               children: groupedLoans.entries.map((e) {
                 return Card(
@@ -435,13 +456,13 @@ void showEndTrackerDialog(BuildContext context, LabState state) {
             ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE", style: TextStyle(fontSize: 16)))
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("CLOSE", style: TextStyle(fontSize: 16, color: Color(0xFFD32F2F))))
       ],
     ),
   );
 }
 
-// --- PANELS (Updated to accept the navigation callback) ---
+// --- PANELS ---
 
 class SelectionPanel extends StatelessWidget {
   final Function(int)? onNavigate;
@@ -456,7 +477,11 @@ class SelectionPanel extends StatelessWidget {
       length: 2,
       child: Column(
         children: [
-          const TabBar(labelColor: Color(0xFF003366), tabs: [Tab(text: "QR QUEUE"), Tab(text: "MANUAL ISSUE")]),
+          const TabBar(
+            labelColor: Color(0xFFD32F2F), 
+            indicatorColor: Color(0xFFD32F2F),
+            tabs: [Tab(text: "QR QUEUE"), Tab(text: "MANUAL ISSUE")]
+          ),
           Expanded(
             child: TabBarView(
               children: [
@@ -469,7 +494,7 @@ class SelectionPanel extends StatelessWidget {
                         final isSelected = state.selectedRequest?['id'] == req['id'];
                         return Card(
                           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          color: isSelected ? Colors.orange[50] : Colors.white,
+                          color: isSelected ? Colors.red[50] : Colors.white,
                           child: ListTile(
                             title: Text(req['student_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text("${req['class_name']}\nItems: ${(req['tools_requested'] as List).length}"),
@@ -477,9 +502,9 @@ class SelectionPanel extends StatelessWidget {
                             trailing: ElevatedButton(
                               onPressed: () {
                                 state.selectRequestForReview(req);
-                                if (!isDesktop && onNavigate != null) onNavigate!(1); // Jump to Center Tab
+                                if (!isDesktop && onNavigate != null) onNavigate!(1); 
                               },
-                              style: ElevatedButton.styleFrom(backgroundColor: isSelected ? const Color(0xFF003366) : Colors.blueGrey, foregroundColor: Colors.white),
+                              style: ElevatedButton.styleFrom(backgroundColor: isSelected ? const Color(0xFFD32F2F) : Colors.blueGrey, foregroundColor: Colors.white),
                               child: Text(isSelected ? "REVIEWING" : "REVIEW"),
                             ),
                           ),
@@ -497,11 +522,11 @@ class SelectionPanel extends StatelessWidget {
                         ElevatedButton.icon(
                           onPressed: () {
                             state.activateManualForm();
-                            if (!isDesktop && onNavigate != null) onNavigate!(1); // Jump to Center Tab
+                            if (!isDesktop && onNavigate != null) onNavigate!(1); 
                           },
                           icon: const Icon(Icons.edit_document),
                           label: const Text("CREATE MANUAL RECORD"),
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF003366), foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
                         )
                       ],
                     ),
@@ -524,7 +549,8 @@ class CenterReviewPanel extends StatelessWidget {
     return InputDecoration(
       labelText: label, prefixIcon: Icon(icon, color: Colors.blueGrey),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      filled: true, fillColor: Colors.grey[50], contentPadding: const EdgeInsets.symmetric(vertical: 10)
+      filled: true, fillColor: Colors.grey[50], contentPadding: const EdgeInsets.symmetric(vertical: 10),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD32F2F), width: 2))
     );
   }
 
@@ -539,7 +565,7 @@ class CenterReviewPanel extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Manual Issue", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF003366))),
+            const Text("Manual Issue", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
             const Divider(),
             Expanded(
               child: SingleChildScrollView(
@@ -556,9 +582,15 @@ class CenterReviewPanel extends StatelessWidget {
                     const SizedBox(height: 10),
                     TextField(controller: state.phoneCtrl, decoration: _inputDecor("Phone Number", Icons.phone)),
                     const SizedBox(height: 20),
-                    const Text("Locker Keys:", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepOrange)),
+                    
+                    // LOCKER KEY INPUT
+                    const Text("Locker Keys:", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
                     const SizedBox(height: 8),
-                    TextField(controller: state.keyCtrl, decoration: _inputDecor("Key Tag (e.g. S21)", Icons.vpn_key).copyWith(fillColor: Colors.orange[50])),
+                    TextField(
+                      controller: state.keyCtrl, 
+                      decoration: _inputDecor("Assign Key Tag (e.g. S21)", Icons.vpn_key).copyWith(fillColor: Colors.red[50], prefixIcon: const Icon(Icons.vpn_key, color: Color(0xFFD32F2F)))
+                    ),
+                    
                     const SizedBox(height: 20),
                     const Text("Tools Issued:", style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
@@ -588,7 +620,7 @@ class CenterReviewPanel extends StatelessWidget {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                 onPressed: () { 
                   state.submitManualForm(); 
-                  if (!isDesktop && onNavigate != null) onNavigate!(2); // Jump to Returns Tab
+                  if (!isDesktop && onNavigate != null) onNavigate!(2); 
                 },
               ),
             )
@@ -600,15 +632,52 @@ class CenterReviewPanel extends StatelessWidget {
     if (state.selectedRequest != null) {
       final req = state.selectedRequest!;
       final List requestedTools = req['tools_requested'] ?? [];
+      
+      // CHECK IF THEY REQUESTED A LOCKER KEY
+      final bool hasLockerKey = state.selectedToolsToApprove.contains('Locker Key');
+
       return Container(
         color: Colors.white, padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Review QR Request", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF003366))),
+            const Text("Review QR Request", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
             const Divider(),
             Text("Student: ${req['student_name']}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             Text("ADM: ${req['adm_number'] ?? 'N/A'} | Class: ${req['class_name']}"),
+            
+            // IF LOCKER KEY REQUESTED, SHOW ASSIGNMENT BOX
+            if (hasLockerKey) ...[
+              const SizedBox(height: 15),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.red[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.redAccent.withOpacity(0.3))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.vpn_key, color: Color(0xFFD32F2F), size: 20),
+                        SizedBox(width: 8),
+                        Text("Locker Key Requested!", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: state.reviewKeyCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: "Assign Key Tag (e.g. S21)",
+                        prefixIcon: const Icon(Icons.tag),
+                        filled: true, fillColor: Colors.white,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 10),
             Container(padding: const EdgeInsets.all(10), color: Colors.orange[50], child: const Text("Uncheck any tools you are NOT giving.")),
             const SizedBox(height: 10),
@@ -619,7 +688,7 @@ class CenterReviewPanel extends StatelessWidget {
                   final toolName = requestedTools[i]['tool'].toString();
                   final isChecked = state.selectedToolsToApprove.contains(toolName);
                   return CheckboxListTile(
-                    title: Text(toolName, style: TextStyle(decoration: isChecked ? null : TextDecoration.lineThrough)),
+                    title: Text(toolName, style: TextStyle(decoration: isChecked ? null : TextDecoration.lineThrough, fontWeight: toolName == 'Locker Key' ? FontWeight.bold : FontWeight.normal)),
                     value: isChecked, activeColor: Colors.green, onChanged: (val) => state.toggleRequestToolSelection(toolName),
                   );
                 },
@@ -632,7 +701,7 @@ class CenterReviewPanel extends StatelessWidget {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                 onPressed: state.selectedToolsToApprove.isEmpty ? null : () { 
                   state.approveSelectedQRRequest();
-                  if (!isDesktop && onNavigate != null) onNavigate!(2); // Jump to Returns Tab
+                  if (!isDesktop && onNavigate != null) onNavigate!(2); 
                 },
               ),
             )
@@ -675,7 +744,7 @@ class CenterReviewPanel extends StatelessWidget {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                 onPressed: state.selectedToolsToReturn.isEmpty ? null : () {
                    state.confirmReturns();
-                   if (!isDesktop && onNavigate != null) onNavigate!(2); // Jump back to Returns List
+                   if (!isDesktop && onNavigate != null) onNavigate!(2); 
                 },
               ),
             )
@@ -706,7 +775,7 @@ class ActionPanel extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            color: const Color(0xFF003366),
+            color: const Color(0xFFD32F2F), // KINAP Red
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -720,7 +789,7 @@ class ActionPanel extends StatelessWidget {
                       onPressed: state.activeLoans.isEmpty ? null : () => showEndTrackerDialog(context, state),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.picture_as_pdf, color: Colors.redAccent),
+                      icon: const Icon(Icons.picture_as_pdf, color: Colors.white),
                       tooltip: "Export PDF",
                       onPressed: state.activeLoans.isEmpty ? null : () => state.generatePDF(),
                     ),
@@ -773,7 +842,7 @@ class ActionPanel extends StatelessWidget {
                             child: ElevatedButton(
                               onPressed: () { 
                                 state.selectReturnBorrower(borrowerName);
-                                if (!isDesktop && onNavigate != null) onNavigate!(1); // Jump to Center Review Tab
+                                if (!isDesktop && onNavigate != null) onNavigate!(1); 
                               }, 
                               style: ElevatedButton.styleFrom(backgroundColor: isSelected ? Colors.green : Colors.grey.shade100, foregroundColor: isSelected ? Colors.white : Colors.black87, elevation: 0),
                               child: Text(isSelected ? "REVIEWING..." : "PROCESS RETURN"),
