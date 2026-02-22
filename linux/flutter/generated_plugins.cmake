@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   gtk
   isar_flutter_libs
+  printing
   screen_retriever_linux
   url_launcher_linux
   window_manager
