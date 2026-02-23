@@ -6,7 +6,7 @@
     "background_color": "#F0F2F5",
     "theme_color": "#D32F2F",
     "description": "The Kiambu National Polytechnic Admin Ledger.",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
