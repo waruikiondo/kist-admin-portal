@@ -52,6 +52,9 @@ class TransactionLog {
   late DateTime timeBorrowed;
   DateTime? timeReturned;
   bool isReturned;
+  
+  // NEW: Add this to track cloud sync status
+  bool isSynced; 
 
   TransactionLog({
     required this.toolName,
@@ -59,5 +62,6 @@ class TransactionLog {
     this.isGroupIssue = false,
     required this.timeBorrowed,
     this.isReturned = false,
+    this.isSynced = false, // Defaults to false until synced with Supabase
   });
 }

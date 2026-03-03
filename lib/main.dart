@@ -1,50 +1,37 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sync_pdf; 
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// --- DATA MODELS ---
-class Tool {
-  final String id;
-  final String name;
-  final String category;
-  bool isAvailable;
-  Tool({required this.id, required this.name, required this.category, this.isAvailable = true});
-}
-
-class Student {
-  final String admNumber;
-  final String name;
-  final String? groupName;
-  Student({required this.admNumber, required this.name, this.groupName});
-}
-
-class LabGroup {
-  final String name;
-  LabGroup({required this.name});
-}
-
-class TransactionLog {
-  final int id;
-  final String toolName;
-  final String issuedTo;
-  final bool isGroupIssue;
-  final DateTime timeBorrowed;
-  TransactionLog({required this.id, required this.toolName, required this.issuedTo, this.isGroupIssue = false, required this.timeBorrowed});
-}
+import 'data/schemas.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Connect to Supabase
+  // --- INITIALIZE SUPABASE ---
   await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL_HERE', 
-    anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE'
+    url: 'https://htvyekhsxzctvlltqtsq.supabase.co', 
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0dnlla2hzeHpjdHZsbHRxdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDA1NjMsImV4cCI6MjA4NjU3NjU2M30.F8DUOG6q9ynw1IbIkn1Q1GJfICL_XvJKb9V-AlPCuEw'
   );
-  
+
+  final dir = await getApplicationDocumentsDirectory();
+  final isar = await Isar.open(
+    [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
+    directory: dir.path,
+  );
+
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => LabState())],
+      providers: [ChangeNotifierProvider(create: (_) => LabState(isar))],
       child: const KinapLabApp(),
     ),
   );
@@ -56,445 +43,698 @@ class KinapLabApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'KINAP Mechatronics Lab',
+      title: 'KINAP Mechatronics POS',
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(),
-        // BRANDING UPDATED TO KINAP RED (#D32F2F)
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD32F2F)),
         scaffoldBackgroundColor: const Color(0xFFF0F2F5),
       ),
-      home: const DashboardScreen(),
+      home: const PosDashboard(),
     );
   }
 }
 
 // --- STATE MANAGEMENT ---
 class LabState extends ChangeNotifier {
-  final _supabase = Supabase.instance.client;
+  final Isar isar;
   
-  List<Tool> tools = [];
-  List<Student> students = [];
-  List<LabGroup> groups = [LabGroup(name: "DIM2509B"), LabGroup(name: "DIM2509A"), LabGroup(name: "DIM2505B"), LabGroup(name: "DIM2505A"), LabGroup(name: "DIM2409B"), LabGroup(name: "DIM2409A"), LabGroup(name: "DIM2405"), LabGroup(name: "DIM2309")];
+  List<Student> allStudents = [];
+  List<Student> filteredStudents = [];
   List<TransactionLog> activeLoans = [];
-  List<Map<String, dynamic>> pendingRequests = [];
-
-  Student? selectedStudent;
-  LabGroup? selectedGroup;
-  List<Tool> selectedTools = [];
   
-  String studentSearchQuery = '';
+  Student? selectedStudent;
+  List<String> cartItems = []; 
+  String searchQuery = '';
+  String? selectedClassFilter; 
+  
+  bool isSyncing = false; // Tracks if cloud sync is in progress
 
-  LabState() { _init(); }
-
-  void _init() async {
-    await refresh();
-    listenToLiveQueue();
+  LabState(this.isar) {
+    _init();
   }
 
-  void listenToLiveQueue() {
-    _supabase.from('tool_requests').stream(primaryKey: ['id']).eq('status', 'PENDING').order('created_at', ascending: true).listen((data) {
-      pendingRequests = data;
-      notifyListeners();
-    });
+  Future<void> _init() async {
+    await refreshData();
   }
 
-  Future<void> refresh() async {
-    try {
-      final toolsData = await _supabase.from('tools').select().order('name');
-      tools = toolsData.map((t) => Tool(id: t['id'].toString(), name: t['name'], category: t['category'] ?? 'General', isAvailable: t['is_available'] ?? true)).toList();
-
-      final studentsData = await _supabase.from('students').select().order('name');
-      students = studentsData.map((s) => Student(admNumber: s['adm_number'], name: s['name'], groupName: s['group_name'])).toList();
-
-      final loansData = await _supabase.from('transaction_logs').select().eq('is_returned', false).order('time_borrowed', ascending: false);
-      activeLoans = loansData.map((l) => TransactionLog(id: l['id'], toolName: l['tool_name'], issuedTo: l['issued_to'] ?? 'Unknown', isGroupIssue: l['is_group_issue'] ?? false, timeBorrowed: DateTime.parse(l['time_borrowed']))).toList();
-
-      notifyListeners();
-    } catch (e) { debugPrint("Error: $e"); }
-  }
-
-  List<Student> get filteredStudents {
-    if (studentSearchQuery.isEmpty) return students;
-    return students.where((s) {
-      final query = studentSearchQuery.toLowerCase();
-      return s.admNumber.toLowerCase().contains(query) || 
-             s.name.toLowerCase().contains(query);
-    }).toList();
-  }
-
-  void setStudentSearchQuery(String query) {
-    studentSearchQuery = query;
+  Future<void> refreshData() async {
+    allStudents = await isar.students.where().findAll();
+    activeLoans = await isar.transactionLogs.filter().isReturnedEqualTo(false).sortByTimeBorrowedDesc().findAll();
+    _applyFilter();
     notifyListeners();
   }
 
-  void selectStudent(Student s) { selectedStudent = s; selectedGroup = null; notifyListeners(); }
-  void selectGroup(LabGroup g) { selectedGroup = g; selectedStudent = null; notifyListeners(); }
-  void toggleToolSelection(Tool tool) { selectedTools.contains(tool) ? selectedTools.remove(tool) : selectedTools.add(tool); notifyListeners(); }
+  List<String> get uploadedClasses {
+    final classes = allStudents.map((s) => s.groupName ?? '').where((g) => g.isNotEmpty).toSet().toList();
+    classes.sort();
+    return classes;
+  }
 
-  // NEW: Added phone parameter for manual entry
-  Future<void> issueTools({String phone = ''}) async {
-    if ((selectedStudent == null && selectedGroup == null) || selectedTools.isEmpty) return;
+  void searchStudent(String query) {
+    searchQuery = query.trim().toLowerCase();
+    _applyFilter();
+  }
+
+  void toggleClassFilter(String className) {
+    if (selectedClassFilter == className) {
+      selectedClassFilter = null; // unselect
+    } else {
+      selectedClassFilter = className; // select
+    }
+    _applyFilter();
+  }
+
+  void _applyFilter() {
+    var tempList = allStudents;
+
+    // 1. Filter by Class Chip if selected
+    if (selectedClassFilter != null) {
+      tempList = tempList.where((s) => s.groupName == selectedClassFilter).toList();
+    }
+
+    // 2. Supercharged Tokenized Search
+    if (searchQuery.isNotEmpty) {
+      final tokens = searchQuery.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+
+      tempList = tempList.where((s) {
+        final searchableString = '${s.admNumber} ${s.name}'.replaceAll('/', '').toLowerCase();
+        return tokens.every((token) => searchableString.contains(token));
+      }).toList();
+    }
+
+    filteredStudents = tempList.take(50).toList(); 
+    notifyListeners();
+  }
+
+  void selectStudent(Student s) {
+    selectedStudent = s;
+    searchQuery = '';
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    selectedStudent = null;
+    cartItems.clear();
+    notifyListeners();
+  }
+
+  void addToCart(String item) {
+    if (item.trim().isNotEmpty) {
+      cartItems.add(item.trim());
+      notifyListeners();
+    }
+  }
+
+  void removeFromCart(String item) {
+    cartItems.remove(item);
+    notifyListeners();
+  }
+
+  Future<void> issueTools() async {
+    if (selectedStudent == null || cartItems.isEmpty) return;
+
+    final now = DateTime.now();
     
-    String issuedToName = selectedStudent?.name ?? selectedGroup?.name ?? 'Unknown';
-    final isGroup = selectedGroup != null;
-
-    // Append the phone number to the log if provided
-    if (!isGroup && phone.isNotEmpty) {
-      issuedToName += ' ($phone)';
-    }
-
-    for (var tool in selectedTools) {
-      tool.isAvailable = false; 
-      await _supabase.from('transaction_logs').insert({'tool_name': tool.name, 'issued_to': issuedToName, 'is_group_issue': isGroup, 'time_borrowed': DateTime.now().toIso8601String(), 'is_returned': false, 'status': 'GOOD'});
-      await _supabase.from('tools').update({'is_available': false}).eq('id', tool.id);
-    }
-    selectedStudent = null; selectedGroup = null; selectedTools = [];
-    await refresh();
-  }
-
-  Future<void> approveQRRequest(Map<String, dynamic> request) async {
-    await _supabase.from('tool_requests').update({'status': 'ISSUED'}).eq('id', request['id']);
-    final List requestedTools = request['tools_requested'] ?? [];
-    for (var reqTool in requestedTools) {
-      final toolName = reqTool['tool'];
-      final tool = tools.firstWhere((t) => t.name == toolName && t.isAvailable, orElse: () => Tool(id: '', name: '', category: ''));
-      if (tool.id.isNotEmpty) {
-        await _supabase.from('transaction_logs').insert({'tool_name': tool.name, 'issued_to': request['student_name'] + " (QR)", 'is_group_issue': false, 'time_borrowed': DateTime.now().toIso8601String(), 'is_returned': false, 'status': 'GOOD'});
-        await _supabase.from('tools').update({'is_available': false}).eq('id', tool.id);
+    await isar.writeTxn(() async {
+      for (var item in cartItems) {
+        final log = TransactionLog(
+          toolName: item,
+          issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+          timeBorrowed: now,
+          isGroupIssue: false,
+          isReturned: false,
+          isSynced: false, // Flag for Supabase Sync
+        );
+        await isar.transactionLogs.put(log);
       }
-    }
-    await refresh();
+    });
+
+    clearSelection();
+    await refreshData();
   }
 
-  Future<void> returnItem(TransactionLog log) async {
-    await _supabase.from('transaction_logs').update({'is_returned': true, 'time_returned': DateTime.now().toIso8601String()}).eq('id', log.id);
-    await _supabase.from('tools').update({'is_available': true}).eq('name', log.toolName);
-    await refresh();
+  Future<void> returnTool(int logId) async {
+    await isar.writeTxn(() async {
+      final log = await isar.transactionLogs.get(logId);
+      if (log != null) {
+        log.isReturned = true;
+        log.timeReturned = DateTime.now();
+        log.isSynced = false; // Mark as unsynced so the return goes to Supabase
+        await isar.transactionLogs.put(log);
+      }
+    });
+    await refreshData();
+  }
+
+  // --- PDF BULK IMPORTER ---
+  Future<int> bulkImportFromPdf(String className) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+
+    if (result == null || result.files.single.path == null) return -1; 
+
+    final File file = File(result.files.single.path!);
+    final sync_pdf.PdfDocument document = sync_pdf.PdfDocument(inputBytes: await file.readAsBytes());
+    final String rawText = sync_pdf.PdfTextExtractor(document).extractText();
+    document.dispose();
+
+    int importedCount = 0;
+    final RegExp admExp = RegExp(r'(DIM|MET5|ΜΕΤ5)\s*/\s*\d{4}\s*/\s*\d{2}', caseSensitive: false);
+    final lines = rawText.split('\n');
+    
+    await isar.writeTxn(() async {
+      for (int i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        final match = admExp.firstMatch(line);
+        
+        if (match != null) {
+          final adm = match.group(0)!.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+          var name = line.substring(match.end).replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim();
+          
+          if (name.isEmpty && i + 1 < lines.length) {
+              final nextLine = lines[i+1];
+              if (!admExp.hasMatch(nextLine)) {
+                  name = nextLine.replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim();
+              }
+          }
+          if (name.isEmpty) name = "Unknown Name";
+
+          final existing = await isar.students.filter().admNumberEqualTo(adm).findFirst();
+          if (existing == null) {
+            await isar.students.put(Student(admNumber: adm, name: name, groupName: className));
+            importedCount++;
+          } else {
+            existing.name = name != "Unknown Name" ? name : existing.name;
+            existing.groupName = className;
+            await isar.students.put(existing);
+            importedCount++;
+          }
+        }
+      }
+    });
+    
+    selectedClassFilter = className;
+    searchQuery = '';
+    
+    await refreshData();
+    return importedCount;
+  }
+
+  // --- TWO-WAY SUPABASE CLOUD SYNC ---
+  Future<void> syncWithCloud(BuildContext context) async {
+    if (isSyncing) return;
+    isSyncing = true;
+    notifyListeners();
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // 1. PUSH STUDENTS TO SUPABASE
+      final localStudents = await isar.students.where().findAll();
+      for (var student in localStudents) {
+        await supabase.from('students').upsert({
+          'adm_number': student.admNumber,
+          'name': student.name,
+          'group_name': student.groupName,
+        }, onConflict: 'adm_number'); // Upsert prevents duplicates
+      }
+
+      // 2. PULL STUDENTS FROM SUPABASE
+      final cloudStudents = await supabase.from('students').select();
+      await isar.writeTxn(() async {
+        for (var row in cloudStudents) {
+          final adm = row['adm_number'];
+          final existing = await isar.students.filter().admNumberEqualTo(adm).findFirst();
+          if (existing == null) {
+            await isar.students.put(Student(
+              admNumber: adm,
+              name: row['name'],
+              groupName: row['group_name']
+            ));
+          }
+        }
+      });
+
+      // 3. PUSH UNSYNCED LOGS TO SUPABASE
+      final unsyncedLogs = await isar.transactionLogs.filter().isSyncedEqualTo(false).findAll();
+      for (var log in unsyncedLogs) {
+        await supabase.from('transaction_logs').insert({
+          'tool_name': log.toolName,
+          'issued_to': log.issuedTo,
+          'is_group_issue': log.isGroupIssue,
+          'time_borrowed': log.timeBorrowed.toIso8601String(),
+          'is_returned': log.isReturned,
+          'time_returned': log.timeReturned?.toIso8601String(),
+        });
+      }
+
+      // Mark local logs as synced
+      await isar.writeTxn(() async {
+        for (var log in unsyncedLogs) {
+          log.isSynced = true;
+          await isar.transactionLogs.put(log);
+        }
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cloud Sync Complete! ☁️✅"), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sync failed. Check connection: $e"), backgroundColor: Colors.red));
+      }
+    } finally {
+      isSyncing = false;
+      await refreshData();
+    }
   }
 }
 
 // --- UI DASHBOARD ---
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
+class PosDashboard extends StatelessWidget {
+  const PosDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 900;
-    if (isDesktop) return Scaffold(appBar: _buildAppBar(context, isDesktop), body: const DesktopLayout());
+    final isDesktop = MediaQuery.of(context).size.width > 800;
+
     return Scaffold(
-      appBar: _buildAppBar(context, isDesktop),
-      body: TabBarView(controller: _tabController, children: const [SelectionPanel(), ToolGridPanel(), ActionPanel()]),
-      bottomNavigationBar: Container(
-        color: const Color(0xFFD32F2F), // Red Navigation
-        child: TabBar(
-          controller: _tabController, indicatorColor: Colors.white, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-          tabs: const [Tab(icon: Icon(Icons.people), text: "Select"), Tab(icon: Icon(Icons.build), text: "Tools"), Tab(icon: Icon(Icons.shopping_cart), text: "Cart")],
-        ),
+      appBar: AppBar(
+        title: const Text("KINAP Lab POS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFFD32F2F),
+        actions: [
+          Consumer<LabState>(
+            builder: (context, state, child) {
+              return IconButton(
+                icon: state.isSyncing 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.cloud_sync, color: Colors.white),
+                tooltip: "Sync with Cloud",
+                onPressed: state.isSyncing ? null : () => state.syncWithCloud(context),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_add, color: Colors.white),
+            tooltip: "Bulk Import Class",
+            onPressed: () => _showBulkImportDialog(context),
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
+      body: isDesktop ? const DesktopPosLayout() : const MobilePosLayout(),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, bool isDesktop) {
-    return AppBar(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(isDesktop ? "THE KIAMBU NATIONAL POLYTECHNIC" : "KINAP Inventory", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, letterSpacing: 1.0)),
-          if (isDesktop) const Text("Mechanical, Mechatronics & Automotive Engineering Department", style: TextStyle(fontSize: 12, color: Colors.white70)),
+  void _showBulkImportDialog(BuildContext context) {
+    final classCtrl = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Import Class from PDF"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter the class name, then attach the PDF file to auto-import students.", style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 15),
+            TextField(
+              controller: classCtrl,
+              decoration: const InputDecoration(labelText: "Class Name (e.g., DIM2409B)", border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (classCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter a class name!")));
+                return;
+              }
+              Navigator.pop(dialogContext); 
+              
+              try {
+                final count = await context.read<LabState>().bulkImportFromPdf(classCtrl.text.trim().toUpperCase());
+                if (count > 0 && context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Success: Extracted $count students!"), backgroundColor: Colors.green));
+                } else if (count == 0 && context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No students found in that PDF."), backgroundColor: Colors.orange));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error reading PDF: $e"), backgroundColor: Colors.red));
+                }
+              }
+            },
+            icon: const Icon(Icons.upload_file),
+            label: const Text("Select PDF"),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
+          )
         ],
       ),
-      backgroundColor: const Color(0xFFD32F2F), // KINAP RED
-      actions: [
-        if (isDesktop)
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: Chip(label: Text("Cloud Sync Active", style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold)), backgroundColor: Colors.green[50], avatar: const Icon(Icons.wifi, color: Colors.green, size: 18)),
-          )
-      ],
     );
   }
 }
 
-class DesktopLayout extends StatelessWidget {
-  const DesktopLayout({super.key});
+// --- DESKTOP LAYOUT ---
+class DesktopPosLayout extends StatelessWidget {
+  const DesktopPosLayout({super.key});
   @override
   Widget build(BuildContext context) {
     return const Row(
       children: [
-        Expanded(flex: 3, child: SelectionPanel()), 
+        Expanded(flex: 3, child: SmartSearchPanel()),
         VerticalDivider(width: 1),
-        Expanded(flex: 5, child: ToolGridPanel()),
+        Expanded(flex: 3, child: ToolEntryPanel()),
         VerticalDivider(width: 1),
-        Expanded(flex: 3, child: ActionPanel()),
+        Expanded(flex: 4, child: CartAndLoansPanel()),
       ],
     );
   }
 }
 
-class SelectionPanel extends StatelessWidget {
-  const SelectionPanel({super.key});
+// --- MOBILE LAYOUT ---
+class MobilePosLayout extends StatelessWidget {
+  const MobilePosLayout({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Expanded(flex: 2, child: SmartSearchPanel()),
+        Divider(height: 1, thickness: 2),
+        Expanded(flex: 3, child: ToolEntryPanel()),
+        Divider(height: 1, thickness: 2),
+        Expanded(flex: 4, child: CartAndLoansPanel()),
+      ],
+    );
+  }
+}
 
+// --- 1. SMART SEARCH PANEL ---
+class SmartSearchPanel extends StatelessWidget {
+  const SmartSearchPanel({super.key});
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
-    
-    return DefaultTabController(
-      length: 3,
-      child: Container(
-        color: Colors.white,
-        child: Column(
-          children: [
-            Container(
-              color: const Color(0xFF1A1A1A), // Black tab header to complement the Red
-              child: const TabBar(
-                labelColor: Colors.white, unselectedLabelColor: Colors.white54, indicatorColor: Color(0xFFD32F2F), // Red indicator
-                tabs: [Tab(text: "LIVE QR"), Tab(text: "Students"), Tab(text: "Groups")],
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("1. Select Student", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 10),
+          
+          if (state.uploadedClasses.isNotEmpty)
+            SizedBox(
+              height: 40,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: state.uploadedClasses.length,
+                itemBuilder: (context, index) {
+                  final className = state.uploadedClasses[index];
+                  final isSelected = state.selectedClassFilter == className;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: FilterChip(
+                      label: Text(className, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      selected: isSelected,
+                      selectedColor: Colors.red.shade100,
+                      checkmarkColor: const Color(0xFFD32F2F),
+                      onSelected: (_) => state.toggleClassFilter(className),
+                    ),
+                  );
+                },
               ),
+            )
+          else
+            const Text("No classes loaded. Click the top right icon to import PDFs.", style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic)),
+          
+          const SizedBox(height: 10),
+
+          TextField(
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: "Search ID or Name...",
+              prefixIcon: const Icon(Icons.search, color: Color(0xFFD32F2F)),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
             ),
+            onChanged: (val) => state.searchStudent(val),
+          ),
+          const SizedBox(height: 10),
+          
+          if (state.selectedStudent != null)
+            Card(
+              color: Colors.red.shade50,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Color(0xFFD32F2F))),
+              child: ListTile(
+                title: Text(state.selectedStudent!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("${state.selectedStudent!.admNumber} • ${state.selectedStudent!.groupName ?? ''}"),
+                trailing: IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: state.clearSelection),
+              ),
+            )
+          else if (state.searchQuery.isNotEmpty && state.filteredStudents.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("No students found.", style: TextStyle(color: Colors.red)),
+            )
+          else
             Expanded(
-              child: TabBarView(
-                children: [
-                  // TAB 1: LIVE QR QUEUE
-                  state.pendingRequests.isEmpty
-                      ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.qr_code_scanner, size: 50, color: Colors.grey[300]), const SizedBox(height: 10), Text("Waiting for students...", style: TextStyle(color: Colors.grey[500]))]))
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: state.pendingRequests.length,
-                          itemBuilder: (context, index) {
-                            final req = state.pendingRequests[index];
-                            final List toolsList = req['tools_requested'] ?? [];
-                            return Card(
-                              color: Colors.red.shade50,
-                              child: ListTile(
-                                leading: const Icon(Icons.notifications_active, color: Color(0xFFD32F2F)),
-                                title: Text(req['student_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text("Class: ${req['class_name']}\nTools: ${toolsList.length}"),
-                                trailing: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white), onPressed: () => state.approveQRRequest(req), child: const Text("APPROVE")),
-                              ),
-                            );
-                          },
-                        ),
-
-                  // TAB 2: STUDENTS
-                  Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: "Search Admission No. or Name...",
-                            prefixIcon: const Icon(Icons.search, color: Color(0xFFD32F2F)),
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                          ),
-                          onChanged: (value) => state.setStudentSearchQuery(value),
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemCount: state.filteredStudents.length,
-                          itemBuilder: (context, index) {
-                            final student = state.filteredStudents[index];
-                            final isSelected = state.selectedStudent?.admNumber == student.admNumber;
-                            return Card(
-                              elevation: 0,
-                              color: isSelected ? Colors.red.shade50 : Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: isSelected ? const BorderSide(color: Color(0xFFD32F2F), width: 1) : BorderSide(color: Colors.grey.shade200),
-                              ),
-                              child: ListTile(
-                                title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text("${student.admNumber} • ${student.groupName ?? ''}"),
-                                selected: isSelected,
-                                onTap: () => state.selectStudent(student),
-                                leading: CircleAvatar(
-                                  backgroundColor: isSelected ? const Color(0xFFD32F2F) : Colors.grey[200],
-                                  foregroundColor: isSelected ? Colors.white : Colors.black,
-                                  child: Text(student.name[0]),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // TAB 3: GROUPS
-                  ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: state.groups.length,
-                    itemBuilder: (context, index) {
-                      final group = state.groups[index];
-                      final isSelected = state.selectedGroup?.name == group.name;
-                      return ListTile(
-                        title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        leading: Icon(Icons.workspaces, color: isSelected ? const Color(0xFFD32F2F) : Colors.grey),
-                        selected: isSelected,
-                        tileColor: isSelected ? Colors.red.shade50 : null,
-                        onTap: () => state.selectGroup(group),
-                      );
-                    },
-                  ),
-                ],
+              child: ListView.builder(
+                itemCount: state.filteredStudents.length,
+                itemBuilder: (context, index) {
+                  final student = state.filteredStudents[index];
+                  return ListTile(
+                    title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("${student.admNumber} • ${student.groupName}"),
+                    onTap: () => state.selectStudent(student),
+                  );
+                },
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class ToolGridPanel extends StatelessWidget {
-  const ToolGridPanel({super.key});
+// --- 2. TOOL ENTRY PANEL ---
+class ToolEntryPanel extends StatefulWidget {
+  const ToolEntryPanel({super.key});
+  @override
+  State<ToolEntryPanel> createState() => _ToolEntryPanelState();
+}
+
+class _ToolEntryPanelState extends State<ToolEntryPanel> {
+  final _toolCtrl = TextEditingController();
+
+  void _submitTool(BuildContext context) {
+    if (_toolCtrl.text.isNotEmpty) {
+      context.read<LabState>().addToCart(_toolCtrl.text);
+      _toolCtrl.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<LabState>();
+    final commonKeys = ["S21", "S22", "S23", "S24", "M1", "M2"];
+    
     return Container(
       color: const Color(0xFFFAFAFA),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("2. Select Tools to Issue", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const Text("2. Add Tools / Keys", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
           const SizedBox(height: 10),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 180, childAspectRatio: 1.2, crossAxisSpacing: 10, mainAxisSpacing: 10),
-              itemCount: state.tools.length,
-              itemBuilder: (context, index) {
-                final tool = state.tools[index];
-                final isSelected = state.selectedTools.contains(tool);
-                if (!tool.isAvailable) {
-                  return Container(decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)), child: Center(child: Text("${tool.name}\n(OUT)", textAlign: TextAlign.center, style: const TextStyle(color: Colors.red))));
-                }
-                return InkWell(
-                  onTap: () => state.toggleToolSelection(tool),
-                  child: Container(
-                    decoration: BoxDecoration(color: isSelected ? const Color(0xFF1A1A1A) : Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.build_circle_outlined, size: 30, color: isSelected ? Colors.white : const Color(0xFF1A1A1A)), const SizedBox(height: 5), Text(tool.name, textAlign: TextAlign.center, style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 12))]),
-                  ),
-                );
-              },
+          TextField(
+            controller: _toolCtrl,
+            decoration: InputDecoration(
+              hintText: "e.g., 1 Pliers, Multimeter...",
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.add_circle, color: Colors.green),
+                onPressed: () => _submitTool(context),
+              ),
+              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
             ),
+            onSubmitted: (_) => _submitTool(context),
           ),
+          const SizedBox(height: 20),
+          const Text("Quick Keys:", style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: commonKeys.map((keyLabel) => ActionChip(
+              label: Text(keyLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.grey.shade200,
+              onPressed: () => context.read<LabState>().addToCart("Key $keyLabel"),
+            )).toList(),
+          )
         ],
       ),
     );
   }
 }
 
-// --- UPDATED ACTION PANEL (CART) ---
-class ActionPanel extends StatefulWidget {
-  const ActionPanel({super.key});
-  @override
-  State<ActionPanel> createState() => _ActionPanelState();
-}
+// --- 3. CART & LOANS PANEL ---
+class CartAndLoansPanel extends StatelessWidget {
+  const CartAndLoansPanel({super.key});
 
-class _ActionPanelState extends State<ActionPanel> {
-  final _phoneController = TextEditingController();
+  Future<void> _shareOnWhatsApp(BuildContext context, List<TransactionLog> loans) async {
+    if (loans.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No active outings to share.")));
+      return;
+    }
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
+    Map<String, List<String>> defaulters = {};
+    for (var log in loans) {
+      defaulters.putIfAbsent(log.issuedTo, () => []).add(log.toolName);
+    }
+
+    StringBuffer sb = StringBuffer();
+    sb.writeln("*🚨 KINAP MECHATRONICS LAB - UNRETURNED ITEMS 🚨*");
+    sb.writeln("Please return the following tools immediately to the lab:\n");
+
+    defaulters.forEach((student, tools) {
+      sb.writeln("👤 *$student*");
+      sb.writeln("🔧 Items: ${tools.join(', ')}");
+      sb.writeln("---");
+    });
+
+    final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(sb.toString())}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not launch browser for WhatsApp.")));
+      }
+    }
+  }
+
+  Future<void> _printDefaulters(BuildContext context, List<TransactionLog> loans) async {
+    if (loans.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No active outings to print.")));
+      return;
+    }
+
+    Map<String, List<String>> defaulters = {};
+    for (var log in loans) {
+      defaulters.putIfAbsent(log.issuedTo, () => []).add(log.toolName);
+    }
+
+    final doc = pw.Document();
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("KINAP MECHATRONICS LAB", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+              pw.Text("UNRETURNED ITEMS REPORT", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text("Generated on: ${DateTime.now().toString().split('.')[0]}"),
+              pw.SizedBox(height: 20),
+              pw.Table.fromTextArray(
+                headers: ['Student Details', 'Items Borrowed'],
+                data: defaulters.entries.map((e) => [e.key, e.value.join(', ')]).toList(),
+                cellStyle: const pw.TextStyle(fontSize: 12),
+                headerStyle: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.red800),
+                cellPadding: const pw.EdgeInsets.all(8),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => doc.save(),
+      name: 'KINAP_Defaulters_Report.pdf'
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
-    final isGroup = state.selectedGroup != null;
-
+    
     return Column(
       children: [
-        // CART AREA
-        Expanded(
-          flex: 2,
-          child: Container(
-            color: Colors.red.shade50,
-            padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Confirm Manual Issue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
-                const Divider(),
-                
-                // AUTO-FILL DISPLAY AREA
-                if (state.selectedStudent != null || state.selectedGroup != null) ...[
-                  Text(isGroup ? "Group:" : "Student Details:", style: TextStyle(color: Colors.grey[700], fontSize: 12)),
-                  Text(state.selectedStudent?.name ?? state.selectedGroup!.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  
-                  if (!isGroup) ...[
-                    Text("ADM: ${state.selectedStudent!.admNumber}  |  Class: ${state.selectedStudent!.groupName ?? 'N/A'}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                    const SizedBox(height: 10),
-                    // NEW: PHONE NUMBER MANUAL ENTRY
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number (Optional)',
-                        prefixIcon: const Icon(Icons.phone, size: 18),
-                        isDense: true,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ],
-                ] else 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Text("Search for a student to auto-fill...", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey))),
-                
-                const SizedBox(height: 10),
-                Expanded(child: SingleChildScrollView(child: Wrap(spacing: 5, children: state.selectedTools.map((t) => Chip(label: Text(t.name, style: const TextStyle(fontSize: 11)), onDeleted: () => state.toggleToolSelection(t), backgroundColor: Colors.white)).toList()))),
-                
-                SizedBox(
-                  width: double.infinity, height: 50,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
-                    onPressed: ((state.selectedStudent != null || state.selectedGroup != null) && state.selectedTools.isNotEmpty) 
-                      ? () {
-                          state.issueTools(phone: _phoneController.text.trim());
-                          _phoneController.clear(); // Clear the phone box after issue
-                        } 
-                      : null,
-                    icon: const Icon(Icons.check_circle), label: const Text("ISSUE TOOLS"),
-                  ),
-                )
-              ],
-            ),
+        // CART
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("3. Checkout", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 5,
+                children: state.cartItems.map((item) => Chip(
+                  label: Text(item),
+                  onDeleted: () => state.removeFromCart(item),
+                  backgroundColor: Colors.red.shade50,
+                )).toList(),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
+                  onPressed: (state.selectedStudent != null && state.cartItems.isNotEmpty) ? state.issueTools : null,
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text("ISSUE ITEMS", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
           ),
         ),
+        const Divider(height: 1, thickness: 4, color: Color(0xFFF0F2F5)),
         
-        // ACTIVE LOANS LIST
+        // ACTIVE LOANS
         Expanded(
-          flex: 3,
           child: Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Active Returns", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Active Outings", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.print, color: Color(0xFFD32F2F)),
+                          tooltip: "Print Defaulters Report",
+                          onPressed: () => _printDefaulters(context, state.activeLoans),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.share, color: Colors.green),
+                          tooltip: "Share to WhatsApp",
+                          onPressed: () => _shareOnWhatsApp(context, state.activeLoans),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+                const SizedBox(height: 5),
                 Expanded(
                   child: ListView.separated(
                     itemCount: state.activeLoans.length,
@@ -503,10 +743,13 @@ class _ActionPanelState extends State<ActionPanel> {
                       final loan = state.activeLoans[index];
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.access_time_filled, color: Colors.orange),
-                        title: Text(loan.issuedTo + (loan.isGroupIssue ? " (Group)" : ""), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text(loan.toolName, style: const TextStyle(fontSize: 12)),
-                        trailing: TextButton(onPressed: () => state.returnItem(loan), style: TextButton.styleFrom(foregroundColor: Colors.green), child: const Text("RETURN")),
+                        title: Text(loan.issuedTo.isNotEmpty ? loan.issuedTo : "Unknown Student", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        subtitle: Text(loan.toolName, style: const TextStyle(color: Color(0xFFD32F2F))),
+                        trailing: ElevatedButton(
+                          onPressed: () => state.returnTool(loan.id),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade50, foregroundColor: Colors.green.shade700, elevation: 0),
+                          child: const Text("RETURN"),
+                        ),
                       );
                     },
                   ),
