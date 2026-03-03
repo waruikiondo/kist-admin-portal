@@ -15,7 +15,7 @@ extension GetToolCollection on Isar {
 
 const ToolSchema = CollectionSchema(
   name: r'Tool',
-  id: -6914971854591837127,
+  id: -69149718545918,
   properties: {
     r'category': PropertySchema(
       id: 0,
@@ -45,7 +45,7 @@ const ToolSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'uuid': IndexSchema(
-      id: 2134397340427724972,
+      id: 21343973404277,
       name: r'uuid',
       unique: true,
       replace: false,
@@ -945,7 +945,7 @@ extension GetStudentCollection on Isar {
 
 const StudentSchema = CollectionSchema(
   name: r'Student',
-  id: -252783119861727542,
+  id: -2527831198617,
   properties: {
     r'admNumber': PropertySchema(
       id: 0,
@@ -970,7 +970,7 @@ const StudentSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'admNumber': IndexSchema(
-      id: 421599991717688364,
+      id: 4215999917176,
       name: r'admNumber',
       unique: true,
       replace: false,
@@ -1855,7 +1855,7 @@ extension GetLabGroupCollection on Isar {
 
 const LabGroupSchema = CollectionSchema(
   name: r'LabGroup',
-  id: -175681044214695218,
+  id: -1756810442146,
   properties: {
     r'name': PropertySchema(
       id: 0,
@@ -1870,7 +1870,7 @@ const LabGroupSchema = CollectionSchema(
   idName: r'id',
   indexes: {
     r'name': IndexSchema(
-      id: 879695947855722453,
+      id: 8796959478557,
       name: r'name',
       unique: true,
       replace: false,
@@ -2388,7 +2388,7 @@ extension GetTransactionLogCollection on Isar {
 
 const TransactionLogSchema = CollectionSchema(
   name: r'TransactionLog',
-  id: -204152566212915205,
+  id: -2041525662129,
   properties: {
     r'isGroupIssue': PropertySchema(
       id: 0,
@@ -2400,23 +2400,28 @@ const TransactionLogSchema = CollectionSchema(
       name: r'isReturned',
       type: IsarType.bool,
     ),
-    r'issuedTo': PropertySchema(
+    r'isSynced': PropertySchema(
       id: 2,
+      name: r'isSynced',
+      type: IsarType.bool,
+    ),
+    r'issuedTo': PropertySchema(
+      id: 3,
       name: r'issuedTo',
       type: IsarType.string,
     ),
     r'timeBorrowed': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'timeBorrowed',
       type: IsarType.dateTime,
     ),
     r'timeReturned': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'timeReturned',
       type: IsarType.dateTime,
     ),
     r'toolName': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'toolName',
       type: IsarType.string,
     )
@@ -2454,10 +2459,11 @@ void _transactionLogSerialize(
 ) {
   writer.writeBool(offsets[0], object.isGroupIssue);
   writer.writeBool(offsets[1], object.isReturned);
-  writer.writeString(offsets[2], object.issuedTo);
-  writer.writeDateTime(offsets[3], object.timeBorrowed);
-  writer.writeDateTime(offsets[4], object.timeReturned);
-  writer.writeString(offsets[5], object.toolName);
+  writer.writeBool(offsets[2], object.isSynced);
+  writer.writeString(offsets[3], object.issuedTo);
+  writer.writeDateTime(offsets[4], object.timeBorrowed);
+  writer.writeDateTime(offsets[5], object.timeReturned);
+  writer.writeString(offsets[6], object.toolName);
 }
 
 TransactionLog _transactionLogDeserialize(
@@ -2469,12 +2475,13 @@ TransactionLog _transactionLogDeserialize(
   final object = TransactionLog(
     isGroupIssue: reader.readBoolOrNull(offsets[0]) ?? false,
     isReturned: reader.readBoolOrNull(offsets[1]) ?? false,
-    issuedTo: reader.readString(offsets[2]),
-    timeBorrowed: reader.readDateTime(offsets[3]),
-    toolName: reader.readString(offsets[5]),
+    isSynced: reader.readBoolOrNull(offsets[2]) ?? false,
+    issuedTo: reader.readString(offsets[3]),
+    timeBorrowed: reader.readDateTime(offsets[4]),
+    toolName: reader.readString(offsets[6]),
   );
   object.id = id;
-  object.timeReturned = reader.readDateTimeOrNull(offsets[4]);
+  object.timeReturned = reader.readDateTimeOrNull(offsets[5]);
   return object;
 }
 
@@ -2490,12 +2497,14 @@ P _transactionLogDeserializeProp<P>(
     case 1:
       return (reader.readBoolOrNull(offset) ?? false) as P;
     case 2:
-      return (reader.readString(offset)) as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 3:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 5:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 6:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2668,6 +2677,16 @@ extension TransactionLogQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isReturned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      isSyncedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isSynced',
         value: value,
       ));
     });
@@ -3112,6 +3131,19 @@ extension TransactionLogQuerySortBy
     });
   }
 
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> sortByIsSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIsSyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.desc);
+    });
+  }
+
   QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> sortByIssuedTo() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'issuedTo', Sort.asc);
@@ -3209,6 +3241,19 @@ extension TransactionLogQuerySortThenBy
     });
   }
 
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenByIsSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIsSyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.desc);
+    });
+  }
+
   QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenByIssuedTo() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'issuedTo', Sort.asc);
@@ -3280,6 +3325,12 @@ extension TransactionLogQueryWhereDistinct
     });
   }
 
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct> distinctByIsSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isSynced');
+    });
+  }
+
   QueryBuilder<TransactionLog, TransactionLog, QDistinct> distinctByIssuedTo(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -3326,6 +3377,12 @@ extension TransactionLogQueryProperty
   QueryBuilder<TransactionLog, bool, QQueryOperations> isReturnedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isReturned');
+    });
+  }
+
+  QueryBuilder<TransactionLog, bool, QQueryOperations> isSyncedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isSynced');
     });
   }
 
