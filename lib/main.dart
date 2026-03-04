@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // <-- NEW IMPORT ADDED HERE
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:isar/isar.dart';
@@ -23,10 +24,17 @@ void main() async {
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0dnlla2hzeHpjdHZsbHRxdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDA1NjMsImV4cCI6MjA4NjU3NjU2M30.F8DUOG6q9ynw1IbIkn1Q1GJfICL_XvJKb9V-AlPCuEw'
   );
 
-  final dir = await getApplicationDocumentsDirectory();
+  // --- FIX: WEB-SAFE DIRECTORY CHECK ---
+  String dirPath = ''; // Default to empty string for the web browser
+  if (!kIsWeb) {
+    // If we are on Linux/Windows, get the actual hard drive folder
+    final dir = await getApplicationDocumentsDirectory();
+    dirPath = dir.path;
+  }
+
   final isar = await Isar.open(
     [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
-    directory: dir.path,
+    directory: dirPath, // Uses the safe path depending on the device
   );
 
   runApp(
