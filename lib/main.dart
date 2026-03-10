@@ -17,8 +17,6 @@ import 'data/schemas.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Run the app immediately to prevent the blank white screen
   runApp(const AppBootstrapper());
 }
 
@@ -44,14 +42,12 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
   Future<void> _setupDatabases() async {
     try {
       setState(() => loadingStatus = "Connecting to cloud...");
-      // --- INITIALIZE SUPABASE ---
       await Supabase.initialize(
         url: 'https://htvyekhsxzctvlltqtsq.supabase.co', 
         anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0dnlla2hzeHpjdHZsbHRxdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDA1NjMsImV4cCI6MjA4NjU3NjU2M30.F8DUOG6q9ynw1IbIkn1Q1GJfICL_XvJKb9V-AlPCuEw'
       );
 
       setState(() => loadingStatus = "Setting up local storage...");
-      // --- HYBRID ARCHITECTURE ---
       if (!kIsWeb) {
         final dir = await getApplicationDocumentsDirectory();
         localIsar = await Isar.open(
@@ -62,7 +58,6 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
     } catch (e) {
       debugPrint("Initialization error: $e");
     } finally {
-      // Tell the UI we are done loading
       if (mounted) {
         setState(() {
           isInitializing = false;
@@ -73,7 +68,6 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // Show a sleek loading screen while waiting for Supabase/Isar
     if (isInitializing) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -96,7 +90,6 @@ class _AppBootstrapperState extends State<AppBootstrapper> {
       );
     }
 
-    // Once everything is loaded, boot up the main application
     return MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => LabState(localIsar))],
       child: const KinapLabApp(),
@@ -124,7 +117,7 @@ class KinapLabApp extends StatelessWidget {
 
 // --- STATE MANAGEMENT ---
 class LabState extends ChangeNotifier {
-  final Isar? isar; // Now nullable to support Web
+  final Isar? isar; 
   bool get isWeb => isar == null; 
   
   List<Student> allStudents = [];
@@ -146,17 +139,27 @@ class LabState extends ChangeNotifier {
     await refreshData();
   }
 
+  // --- BLACKLIST LOGIC ---
+  bool isStudentBlacklisted(Student student) {
+    return activeLoans.any((loan) => loan.issuedTo.contains(student.admNumber));
+  }
+
+  List<String> getUnreturnedItemsFor(Student student) {
+    return activeLoans
+        .where((loan) => loan.issuedTo.contains(student.admNumber))
+        .map((loan) => loan.toolName)
+        .toList();
+  }
+  // -----------------------
+
   Future<void> refreshData() async {
     if (!isWeb) {
-      // 1. DESKTOP/OFFLINE MODE: Read from Isar
       allStudents = await isar!.students.where().findAll();
       activeLoans = await isar!.transactionLogs.filter().isReturnedEqualTo(false).sortByTimeBorrowedDesc().findAll();
     } else {
-      // 2. WEB/TRAINER MODE: Read directly from Supabase
       try {
         final supabase = Supabase.instance.client;
         
-        // Fetch Students
         final studentRes = await supabase.from('students').select();
         allStudents = studentRes.map((s) => Student(
           admNumber: s['adm_number'], 
@@ -164,7 +167,6 @@ class LabState extends ChangeNotifier {
           groupName: s['group_name']
         )).toList();
 
-        // Fetch Active Loans
         final logRes = await supabase.from('transaction_logs').select().eq('is_returned', false).order('time_borrowed', ascending: false);
         activeLoans = logRes.map((l) {
           final log = TransactionLog(
@@ -175,7 +177,7 @@ class LabState extends ChangeNotifier {
             isReturned: false,
             isSynced: true,
           );
-          log.id = l['id'] ?? DateTime.now().millisecondsSinceEpoch; // Supabase ID mapping
+          log.id = l['id'] ?? DateTime.now().millisecondsSinceEpoch;
           return log;
         }).toList();
       } catch (e) {
@@ -248,10 +250,11 @@ class LabState extends ChangeNotifier {
 
   Future<void> issueTools() async {
     if (selectedStudent == null || cartItems.isEmpty) return;
+    if (isStudentBlacklisted(selectedStudent!)) return; // Prevent issue if blacklisted
+
     final now = DateTime.now();
     
     if (!isWeb) {
-      // DESKTOP: Write to Isar
       await isar!.writeTxn(() async {
         for (var item in cartItems) {
           final log = TransactionLog(
@@ -266,7 +269,6 @@ class LabState extends ChangeNotifier {
         }
       });
     } else {
-      // WEB: Write directly to Supabase
       final supabase = Supabase.instance.client;
       for (var item in cartItems) {
         await supabase.from('transaction_logs').insert({
@@ -285,7 +287,6 @@ class LabState extends ChangeNotifier {
 
   Future<void> returnTool(int logId) async {
     if (!isWeb) {
-      // DESKTOP: Update Isar
       await isar!.writeTxn(() async {
         final log = await isar!.transactionLogs.get(logId);
         if (log != null) {
@@ -296,7 +297,6 @@ class LabState extends ChangeNotifier {
         }
       });
     } else {
-      // WEB: Update Supabase directly
       await Supabase.instance.client.from('transaction_logs').update({
         'is_returned': true,
         'time_returned': DateTime.now().toIso8601String()
@@ -319,7 +319,6 @@ class LabState extends ChangeNotifier {
     final lines = rawText.split('\n');
     
     if (!isWeb) {
-      // DESKTOP: Process with Isar
       await isar!.writeTxn(() async {
         for (int i = 0; i < lines.length; i++) {
           final line = lines[i];
@@ -346,9 +345,6 @@ class LabState extends ChangeNotifier {
           }
         }
       });
-    } else {
-      // WEB: PDF upload directly to Supabase isn't supported via local file picker in browser easily without converting to bytes. 
-      // It's highly recommended to do Bulk Imports on the Desktop app, then click Sync!
     }
     
     selectedClassFilter = className;
@@ -359,7 +355,6 @@ class LabState extends ChangeNotifier {
 
   Future<void> syncWithCloud(BuildContext context) async {
     if (isWeb) {
-      // If on the web, it's already live! Just refresh the data.
       await refreshData();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Web Portal is Live! ☁️✅"), backgroundColor: Colors.green));
@@ -374,7 +369,6 @@ class LabState extends ChangeNotifier {
     try {
       final supabase = Supabase.instance.client;
 
-      // 1. PUSH STUDENTS TO SUPABASE
       final localStudents = await isar!.students.where().findAll();
       for (var student in localStudents) {
         await supabase.from('students').upsert({
@@ -384,7 +378,6 @@ class LabState extends ChangeNotifier {
         }, onConflict: 'adm_number'); 
       }
 
-      // 2. PULL STUDENTS FROM SUPABASE
       final cloudStudents = await supabase.from('students').select();
       await isar!.writeTxn(() async {
         for (var row in cloudStudents) {
@@ -400,7 +393,6 @@ class LabState extends ChangeNotifier {
         }
       });
 
-      // 3. PUSH UNSYNCED LOGS TO SUPABASE
       final unsyncedLogs = await isar!.transactionLogs.filter().isSyncedEqualTo(false).findAll();
       for (var log in unsyncedLogs) {
         await supabase.from('transaction_logs').insert({
@@ -413,7 +405,6 @@ class LabState extends ChangeNotifier {
         });
       }
 
-      // Mark local logs as synced
       await isar!.writeTxn(() async {
         for (var log in unsyncedLogs) {
           log.isSynced = true;
@@ -612,15 +603,43 @@ class SmartSearchPanel extends StatelessWidget {
           const SizedBox(height: 10),
           
           if (state.selectedStudent != null)
-            Card(
-              color: Colors.red.shade50,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Color(0xFFD32F2F))),
-              child: ListTile(
-                title: Text(state.selectedStudent!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("${state.selectedStudent!.admNumber} • ${state.selectedStudent!.groupName ?? ''}"),
-                trailing: IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: state.clearSelection),
-              ),
+            Builder(
+              builder: (context) {
+                final student = state.selectedStudent!;
+                final isBlacklisted = state.isStudentBlacklisted(student);
+                final unreturnedItems = state.getUnreturnedItemsFor(student);
+
+                return Card(
+                  color: isBlacklisted ? Colors.red.shade50 : Colors.green.shade50,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8), 
+                    side: BorderSide(color: isBlacklisted ? Colors.red : Colors.green, width: 2)
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("${student.admNumber} • ${student.groupName ?? ''}"),
+                        trailing: IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: state.clearSelection),
+                      ),
+                      if (isBlacklisted)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.only(bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))
+                          ),
+                          child: Text(
+                            "⚠️ BLACKLISTED: Unreturned items (${unreturnedItems.join(', ')})",
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        )
+                    ],
+                  ),
+                );
+              }
             )
           else if (state.searchQuery.isNotEmpty && state.filteredStudents.isEmpty)
             const Padding(
@@ -633,9 +652,15 @@ class SmartSearchPanel extends StatelessWidget {
                 itemCount: state.filteredStudents.length,
                 itemBuilder: (context, index) {
                   final student = state.filteredStudents[index];
+                  final isBlacklisted = state.isStudentBlacklisted(student);
+                  
                   return ListTile(
-                    title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      student.name, 
+                      style: TextStyle(fontWeight: FontWeight.bold, color: isBlacklisted ? Colors.red : Colors.black)
+                    ),
                     subtitle: Text("${student.admNumber} • ${student.groupName}"),
+                    trailing: isBlacklisted ? const Icon(Icons.warning, color: Colors.red) : null,
                     onTap: () => state.selectStudent(student),
                   );
                 },
@@ -792,6 +817,12 @@ class CartAndLoansPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
     
+    // Determine if the issue button should be enabled
+    bool isStudentSelected = state.selectedStudent != null;
+    bool hasItemsInCart = state.cartItems.isNotEmpty;
+    bool isBlacklisted = isStudentSelected && state.isStudentBlacklisted(state.selectedStudent!);
+    bool canIssue = isStudentSelected && hasItemsInCart && !isBlacklisted;
+    
     return Column(
       children: [
         // CART
@@ -817,10 +848,16 @@ class CartAndLoansPanel extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
-                  onPressed: (state.selectedStudent != null && state.cartItems.isNotEmpty) ? state.issueTools : null,
-                  icon: const Icon(Icons.check_circle),
-                  label: const Text("ISSUE ITEMS", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isBlacklisted ? Colors.grey : const Color(0xFFD32F2F), 
+                    foregroundColor: Colors.white
+                  ),
+                  onPressed: canIssue ? state.issueTools : null,
+                  icon: Icon(isBlacklisted ? Icons.block : Icons.check_circle),
+                  label: Text(
+                    isBlacklisted ? "STUDENT BLACKLISTED" : "ISSUE ITEMS", 
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+                  ),
                 ),
               )
             ],
