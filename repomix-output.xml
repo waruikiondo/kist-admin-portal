@@ -140,6 +140,7 @@ ios/
 lib/
   data/
     schemas.dart
+    schemas.g.dart
   services/
     supabase_service.dart
   main.dart
@@ -2355,72 +2356,6 @@ migration:
     - 'ios/Runner.xcodeproj/project.pbxproj'
 </file>
 
-<file path="lib/data/schemas.dart">
-import 'package:isar/isar.dart';
-
-part 'schemas.g.dart';
-
-@collection
-class Tool {
-  Id id = Isar.autoIncrement;
-  @Index(unique: true)
-  late String uuid;
-  late String name;
-  late String category;
-  bool isAvailable;
-
-  Tool({
-    required this.uuid,
-    required this.name,
-    required this.category,
-    this.isAvailable = true,
-  });
-}
-
-@collection
-class Student {
-  Id id = Isar.autoIncrement;
-  @Index(unique: true)
-  late String admNumber;
-  late String name;
-  String? groupName;
-
-  Student({
-    required this.admNumber,
-    required this.name,
-    this.groupName,
-  });
-}
-
-@collection
-class LabGroup {
-  Id id = Isar.autoIncrement;
-  @Index(unique: true)
-  late String name;
-
-  LabGroup({required this.name});
-}
-
-@collection
-class TransactionLog {
-  Id id = Isar.autoIncrement;
-  late String toolName;
-  late String issuedTo;
-  bool isGroupIssue;
-  late DateTime timeBorrowed;
-  DateTime? timeReturned;
-  bool isReturned;
-
-  TransactionLog({
-    required this.toolName,
-    required this.issuedTo,
-    this.isGroupIssue = false,
-    required this.timeBorrowed,
-    this.isReturned = false,
-  });
-}
-</file>
-
 <file path="lib/services/supabase_service.dart">
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -2486,6 +2421,3493 @@ class SupabaseService {
             "purpose": "maskable"
         }
     ]
+}
+</file>
+
+<file path="lib/data/schemas.dart">
+import 'package:isar/isar.dart';
+
+part 'schemas.g.dart';
+
+@collection
+class Tool {
+  Id id = Isar.autoIncrement;
+  @Index(unique: true)
+  late String uuid;
+  late String name;
+  late String category;
+  bool isAvailable;
+
+  Tool({
+    required this.uuid,
+    required this.name,
+    required this.category,
+    this.isAvailable = true,
+  });
+}
+
+@collection
+class Student {
+  Id id = Isar.autoIncrement;
+  @Index(unique: true)
+  late String admNumber;
+  late String name;
+  String? groupName;
+
+  Student({
+    required this.admNumber,
+    required this.name,
+    this.groupName,
+  });
+}
+
+@collection
+class LabGroup {
+  Id id = Isar.autoIncrement;
+  @Index(unique: true)
+  late String name;
+
+  LabGroup({required this.name});
+}
+
+@collection
+class TransactionLog {
+  Id id = Isar.autoIncrement;
+  late String toolName;
+  late String issuedTo;
+  bool isGroupIssue;
+  late DateTime timeBorrowed;
+  DateTime? timeReturned;
+  bool isReturned;
+  
+  // NEW: Add this to track cloud sync status
+  bool isSynced; 
+
+  TransactionLog({
+    required this.toolName,
+    required this.issuedTo,
+    this.isGroupIssue = false,
+    required this.timeBorrowed,
+    this.isReturned = false,
+    this.isSynced = false, // Defaults to false until synced with Supabase
+  });
+}
+</file>
+
+<file path="lib/data/schemas.g.dart">
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'schemas.dart';
+
+// **************************************************************************
+// IsarCollectionGenerator
+// **************************************************************************
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetToolCollection on Isar {
+  IsarCollection<Tool> get tools => this.collection();
+}
+
+const ToolSchema = CollectionSchema(
+  name: r'Tool',
+  id: -69149718545918,
+  properties: {
+    r'category': PropertySchema(
+      id: 0,
+      name: r'category',
+      type: IsarType.string,
+    ),
+    r'isAvailable': PropertySchema(
+      id: 1,
+      name: r'isAvailable',
+      type: IsarType.bool,
+    ),
+    r'name': PropertySchema(
+      id: 2,
+      name: r'name',
+      type: IsarType.string,
+    ),
+    r'uuid': PropertySchema(
+      id: 3,
+      name: r'uuid',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _toolEstimateSize,
+  serialize: _toolSerialize,
+  deserialize: _toolDeserialize,
+  deserializeProp: _toolDeserializeProp,
+  idName: r'id',
+  indexes: {
+    r'uuid': IndexSchema(
+      id: 21343973404277,
+      name: r'uuid',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'uuid',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
+  links: {},
+  embeddedSchemas: {},
+  getId: _toolGetId,
+  getLinks: _toolGetLinks,
+  attach: _toolAttach,
+  version: '3.1.0+1',
+);
+
+int _toolEstimateSize(
+  Tool object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.category.length * 3;
+  bytesCount += 3 + object.name.length * 3;
+  bytesCount += 3 + object.uuid.length * 3;
+  return bytesCount;
+}
+
+void _toolSerialize(
+  Tool object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeString(offsets[0], object.category);
+  writer.writeBool(offsets[1], object.isAvailable);
+  writer.writeString(offsets[2], object.name);
+  writer.writeString(offsets[3], object.uuid);
+}
+
+Tool _toolDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = Tool(
+    category: reader.readString(offsets[0]),
+    isAvailable: reader.readBoolOrNull(offsets[1]) ?? true,
+    name: reader.readString(offsets[2]),
+    uuid: reader.readString(offsets[3]),
+  );
+  object.id = id;
+  return object;
+}
+
+P _toolDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readString(offset)) as P;
+    case 1:
+      return (reader.readBoolOrNull(offset) ?? true) as P;
+    case 2:
+      return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _toolGetId(Tool object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _toolGetLinks(Tool object) {
+  return [];
+}
+
+void _toolAttach(IsarCollection<dynamic> col, Id id, Tool object) {
+  object.id = id;
+}
+
+extension ToolByIndex on IsarCollection<Tool> {
+  Future<Tool?> getByUuid(String uuid) {
+    return getByIndex(r'uuid', [uuid]);
+  }
+
+  Tool? getByUuidSync(String uuid) {
+    return getByIndexSync(r'uuid', [uuid]);
+  }
+
+  Future<bool> deleteByUuid(String uuid) {
+    return deleteByIndex(r'uuid', [uuid]);
+  }
+
+  bool deleteByUuidSync(String uuid) {
+    return deleteByIndexSync(r'uuid', [uuid]);
+  }
+
+  Future<List<Tool?>> getAllByUuid(List<String> uuidValues) {
+    final values = uuidValues.map((e) => [e]).toList();
+    return getAllByIndex(r'uuid', values);
+  }
+
+  List<Tool?> getAllByUuidSync(List<String> uuidValues) {
+    final values = uuidValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'uuid', values);
+  }
+
+  Future<int> deleteAllByUuid(List<String> uuidValues) {
+    final values = uuidValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'uuid', values);
+  }
+
+  int deleteAllByUuidSync(List<String> uuidValues) {
+    final values = uuidValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'uuid', values);
+  }
+
+  Future<Id> putByUuid(Tool object) {
+    return putByIndex(r'uuid', object);
+  }
+
+  Id putByUuidSync(Tool object, {bool saveLinks = true}) {
+    return putByIndexSync(r'uuid', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByUuid(List<Tool> objects) {
+    return putAllByIndex(r'uuid', objects);
+  }
+
+  List<Id> putAllByUuidSync(List<Tool> objects, {bool saveLinks = true}) {
+    return putAllByIndexSync(r'uuid', objects, saveLinks: saveLinks);
+  }
+}
+
+extension ToolQueryWhereSort on QueryBuilder<Tool, Tool, QWhere> {
+  QueryBuilder<Tool, Tool, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension ToolQueryWhere on QueryBuilder<Tool, Tool, QWhereClause> {
+  QueryBuilder<Tool, Tool, QAfterWhereClause> idEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterWhereClause> idNotEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterWhereClause> idGreaterThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterWhereClause> idLessThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterWhereClause> uuidEqualTo(String uuid) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'uuid',
+        value: [uuid],
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterWhereClause> uuidNotEqualTo(String uuid) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [],
+              upper: [uuid],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [uuid],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [uuid],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'uuid',
+              lower: [],
+              upper: [uuid],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+}
+
+extension ToolQueryFilter on QueryBuilder<Tool, Tool, QFilterCondition> {
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'category',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'category',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'category',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'category',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'category',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'category',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryContains(String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'category',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'category',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'category',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> categoryIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'category',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> idEqualTo(Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> isAvailableEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isAvailable',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'name',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameContains(String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameMatches(String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'name',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> nameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'uuid',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidContains(String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'uuid',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidMatches(String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'uuid',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'uuid',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterFilterCondition> uuidIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'uuid',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension ToolQueryObject on QueryBuilder<Tool, Tool, QFilterCondition> {}
+
+extension ToolQueryLinks on QueryBuilder<Tool, Tool, QFilterCondition> {}
+
+extension ToolQuerySortBy on QueryBuilder<Tool, Tool, QSortBy> {
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByCategory() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'category', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByCategoryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'category', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByIsAvailable() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isAvailable', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByIsAvailableDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isAvailable', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByUuid() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> sortByUuidDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.desc);
+    });
+  }
+}
+
+extension ToolQuerySortThenBy on QueryBuilder<Tool, Tool, QSortThenBy> {
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByCategory() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'category', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByCategoryDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'category', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByIsAvailable() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isAvailable', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByIsAvailableDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isAvailable', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByUuid() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QAfterSortBy> thenByUuidDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'uuid', Sort.desc);
+    });
+  }
+}
+
+extension ToolQueryWhereDistinct on QueryBuilder<Tool, Tool, QDistinct> {
+  QueryBuilder<Tool, Tool, QDistinct> distinctByCategory(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'category', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QDistinct> distinctByIsAvailable() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isAvailable');
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QDistinct> distinctByName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Tool, Tool, QDistinct> distinctByUuid(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'uuid', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension ToolQueryProperty on QueryBuilder<Tool, Tool, QQueryProperty> {
+  QueryBuilder<Tool, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<Tool, String, QQueryOperations> categoryProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'category');
+    });
+  }
+
+  QueryBuilder<Tool, bool, QQueryOperations> isAvailableProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isAvailable');
+    });
+  }
+
+  QueryBuilder<Tool, String, QQueryOperations> nameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'name');
+    });
+  }
+
+  QueryBuilder<Tool, String, QQueryOperations> uuidProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'uuid');
+    });
+  }
+}
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetStudentCollection on Isar {
+  IsarCollection<Student> get students => this.collection();
+}
+
+const StudentSchema = CollectionSchema(
+  name: r'Student',
+  id: -2527831198617,
+  properties: {
+    r'admNumber': PropertySchema(
+      id: 0,
+      name: r'admNumber',
+      type: IsarType.string,
+    ),
+    r'groupName': PropertySchema(
+      id: 1,
+      name: r'groupName',
+      type: IsarType.string,
+    ),
+    r'name': PropertySchema(
+      id: 2,
+      name: r'name',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _studentEstimateSize,
+  serialize: _studentSerialize,
+  deserialize: _studentDeserialize,
+  deserializeProp: _studentDeserializeProp,
+  idName: r'id',
+  indexes: {
+    r'admNumber': IndexSchema(
+      id: 4215999917176,
+      name: r'admNumber',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'admNumber',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
+  links: {},
+  embeddedSchemas: {},
+  getId: _studentGetId,
+  getLinks: _studentGetLinks,
+  attach: _studentAttach,
+  version: '3.1.0+1',
+);
+
+int _studentEstimateSize(
+  Student object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.admNumber.length * 3;
+  {
+    final value = object.groupName;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.name.length * 3;
+  return bytesCount;
+}
+
+void _studentSerialize(
+  Student object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeString(offsets[0], object.admNumber);
+  writer.writeString(offsets[1], object.groupName);
+  writer.writeString(offsets[2], object.name);
+}
+
+Student _studentDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = Student(
+    admNumber: reader.readString(offsets[0]),
+    groupName: reader.readStringOrNull(offsets[1]),
+    name: reader.readString(offsets[2]),
+  );
+  object.id = id;
+  return object;
+}
+
+P _studentDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readString(offset)) as P;
+    case 1:
+      return (reader.readStringOrNull(offset)) as P;
+    case 2:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _studentGetId(Student object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _studentGetLinks(Student object) {
+  return [];
+}
+
+void _studentAttach(IsarCollection<dynamic> col, Id id, Student object) {
+  object.id = id;
+}
+
+extension StudentByIndex on IsarCollection<Student> {
+  Future<Student?> getByAdmNumber(String admNumber) {
+    return getByIndex(r'admNumber', [admNumber]);
+  }
+
+  Student? getByAdmNumberSync(String admNumber) {
+    return getByIndexSync(r'admNumber', [admNumber]);
+  }
+
+  Future<bool> deleteByAdmNumber(String admNumber) {
+    return deleteByIndex(r'admNumber', [admNumber]);
+  }
+
+  bool deleteByAdmNumberSync(String admNumber) {
+    return deleteByIndexSync(r'admNumber', [admNumber]);
+  }
+
+  Future<List<Student?>> getAllByAdmNumber(List<String> admNumberValues) {
+    final values = admNumberValues.map((e) => [e]).toList();
+    return getAllByIndex(r'admNumber', values);
+  }
+
+  List<Student?> getAllByAdmNumberSync(List<String> admNumberValues) {
+    final values = admNumberValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'admNumber', values);
+  }
+
+  Future<int> deleteAllByAdmNumber(List<String> admNumberValues) {
+    final values = admNumberValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'admNumber', values);
+  }
+
+  int deleteAllByAdmNumberSync(List<String> admNumberValues) {
+    final values = admNumberValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'admNumber', values);
+  }
+
+  Future<Id> putByAdmNumber(Student object) {
+    return putByIndex(r'admNumber', object);
+  }
+
+  Id putByAdmNumberSync(Student object, {bool saveLinks = true}) {
+    return putByIndexSync(r'admNumber', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByAdmNumber(List<Student> objects) {
+    return putAllByIndex(r'admNumber', objects);
+  }
+
+  List<Id> putAllByAdmNumberSync(List<Student> objects,
+      {bool saveLinks = true}) {
+    return putAllByIndexSync(r'admNumber', objects, saveLinks: saveLinks);
+  }
+}
+
+extension StudentQueryWhereSort on QueryBuilder<Student, Student, QWhere> {
+  QueryBuilder<Student, Student, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension StudentQueryWhere on QueryBuilder<Student, Student, QWhereClause> {
+  QueryBuilder<Student, Student, QAfterWhereClause> idEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterWhereClause> idNotEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterWhereClause> idGreaterThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterWhereClause> idLessThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterWhereClause> admNumberEqualTo(
+      String admNumber) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'admNumber',
+        value: [admNumber],
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterWhereClause> admNumberNotEqualTo(
+      String admNumber) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'admNumber',
+              lower: [],
+              upper: [admNumber],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'admNumber',
+              lower: [admNumber],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'admNumber',
+              lower: [admNumber],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'admNumber',
+              lower: [],
+              upper: [admNumber],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+}
+
+extension StudentQueryFilter
+    on QueryBuilder<Student, Student, QFilterCondition> {
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'admNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'admNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'admNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'admNumber',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'admNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'admNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'admNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'admNumber',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'admNumber',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> admNumberIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'admNumber',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'groupName',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'groupName',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'groupName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'groupName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'groupName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'groupName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'groupName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'groupName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'groupName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'groupName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'groupName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> groupNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'groupName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> idEqualTo(Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'name',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'name',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterFilterCondition> nameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension StudentQueryObject
+    on QueryBuilder<Student, Student, QFilterCondition> {}
+
+extension StudentQueryLinks
+    on QueryBuilder<Student, Student, QFilterCondition> {}
+
+extension StudentQuerySortBy on QueryBuilder<Student, Student, QSortBy> {
+  QueryBuilder<Student, Student, QAfterSortBy> sortByAdmNumber() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'admNumber', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> sortByAdmNumberDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'admNumber', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> sortByGroupName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> sortByGroupNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> sortByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> sortByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+}
+
+extension StudentQuerySortThenBy
+    on QueryBuilder<Student, Student, QSortThenBy> {
+  QueryBuilder<Student, Student, QAfterSortBy> thenByAdmNumber() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'admNumber', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenByAdmNumberDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'admNumber', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenByGroupName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenByGroupNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'groupName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Student, Student, QAfterSortBy> thenByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+}
+
+extension StudentQueryWhereDistinct
+    on QueryBuilder<Student, Student, QDistinct> {
+  QueryBuilder<Student, Student, QDistinct> distinctByAdmNumber(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'admNumber', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Student, Student, QDistinct> distinctByGroupName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'groupName', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<Student, Student, QDistinct> distinctByName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension StudentQueryProperty
+    on QueryBuilder<Student, Student, QQueryProperty> {
+  QueryBuilder<Student, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<Student, String, QQueryOperations> admNumberProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'admNumber');
+    });
+  }
+
+  QueryBuilder<Student, String?, QQueryOperations> groupNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'groupName');
+    });
+  }
+
+  QueryBuilder<Student, String, QQueryOperations> nameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'name');
+    });
+  }
+}
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetLabGroupCollection on Isar {
+  IsarCollection<LabGroup> get labGroups => this.collection();
+}
+
+const LabGroupSchema = CollectionSchema(
+  name: r'LabGroup',
+  id: -1756810442146,
+  properties: {
+    r'name': PropertySchema(
+      id: 0,
+      name: r'name',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _labGroupEstimateSize,
+  serialize: _labGroupSerialize,
+  deserialize: _labGroupDeserialize,
+  deserializeProp: _labGroupDeserializeProp,
+  idName: r'id',
+  indexes: {
+    r'name': IndexSchema(
+      id: 8796959478557,
+      name: r'name',
+      unique: true,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'name',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    )
+  },
+  links: {},
+  embeddedSchemas: {},
+  getId: _labGroupGetId,
+  getLinks: _labGroupGetLinks,
+  attach: _labGroupAttach,
+  version: '3.1.0+1',
+);
+
+int _labGroupEstimateSize(
+  LabGroup object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.name.length * 3;
+  return bytesCount;
+}
+
+void _labGroupSerialize(
+  LabGroup object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeString(offsets[0], object.name);
+}
+
+LabGroup _labGroupDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = LabGroup(
+    name: reader.readString(offsets[0]),
+  );
+  object.id = id;
+  return object;
+}
+
+P _labGroupDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _labGroupGetId(LabGroup object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _labGroupGetLinks(LabGroup object) {
+  return [];
+}
+
+void _labGroupAttach(IsarCollection<dynamic> col, Id id, LabGroup object) {
+  object.id = id;
+}
+
+extension LabGroupByIndex on IsarCollection<LabGroup> {
+  Future<LabGroup?> getByName(String name) {
+    return getByIndex(r'name', [name]);
+  }
+
+  LabGroup? getByNameSync(String name) {
+    return getByIndexSync(r'name', [name]);
+  }
+
+  Future<bool> deleteByName(String name) {
+    return deleteByIndex(r'name', [name]);
+  }
+
+  bool deleteByNameSync(String name) {
+    return deleteByIndexSync(r'name', [name]);
+  }
+
+  Future<List<LabGroup?>> getAllByName(List<String> nameValues) {
+    final values = nameValues.map((e) => [e]).toList();
+    return getAllByIndex(r'name', values);
+  }
+
+  List<LabGroup?> getAllByNameSync(List<String> nameValues) {
+    final values = nameValues.map((e) => [e]).toList();
+    return getAllByIndexSync(r'name', values);
+  }
+
+  Future<int> deleteAllByName(List<String> nameValues) {
+    final values = nameValues.map((e) => [e]).toList();
+    return deleteAllByIndex(r'name', values);
+  }
+
+  int deleteAllByNameSync(List<String> nameValues) {
+    final values = nameValues.map((e) => [e]).toList();
+    return deleteAllByIndexSync(r'name', values);
+  }
+
+  Future<Id> putByName(LabGroup object) {
+    return putByIndex(r'name', object);
+  }
+
+  Id putByNameSync(LabGroup object, {bool saveLinks = true}) {
+    return putByIndexSync(r'name', object, saveLinks: saveLinks);
+  }
+
+  Future<List<Id>> putAllByName(List<LabGroup> objects) {
+    return putAllByIndex(r'name', objects);
+  }
+
+  List<Id> putAllByNameSync(List<LabGroup> objects, {bool saveLinks = true}) {
+    return putAllByIndexSync(r'name', objects, saveLinks: saveLinks);
+  }
+}
+
+extension LabGroupQueryWhereSort on QueryBuilder<LabGroup, LabGroup, QWhere> {
+  QueryBuilder<LabGroup, LabGroup, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension LabGroupQueryWhere on QueryBuilder<LabGroup, LabGroup, QWhereClause> {
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> idEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> idNotEqualTo(Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> idGreaterThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> idLessThan(Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> nameEqualTo(String name) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'name',
+        value: [name],
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterWhereClause> nameNotEqualTo(
+      String name) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'name',
+              lower: [],
+              upper: [name],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'name',
+              lower: [name],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'name',
+              lower: [name],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'name',
+              lower: [],
+              upper: [name],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+}
+
+extension LabGroupQueryFilter
+    on QueryBuilder<LabGroup, LabGroup, QFilterCondition> {
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> idEqualTo(Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'name',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameContains(
+      String value,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'name',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'name',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterFilterCondition> nameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'name',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension LabGroupQueryObject
+    on QueryBuilder<LabGroup, LabGroup, QFilterCondition> {}
+
+extension LabGroupQueryLinks
+    on QueryBuilder<LabGroup, LabGroup, QFilterCondition> {}
+
+extension LabGroupQuerySortBy on QueryBuilder<LabGroup, LabGroup, QSortBy> {
+  QueryBuilder<LabGroup, LabGroup, QAfterSortBy> sortByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterSortBy> sortByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+}
+
+extension LabGroupQuerySortThenBy
+    on QueryBuilder<LabGroup, LabGroup, QSortThenBy> {
+  QueryBuilder<LabGroup, LabGroup, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterSortBy> thenByName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.asc);
+    });
+  }
+
+  QueryBuilder<LabGroup, LabGroup, QAfterSortBy> thenByNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+}
+
+extension LabGroupQueryWhereDistinct
+    on QueryBuilder<LabGroup, LabGroup, QDistinct> {
+  QueryBuilder<LabGroup, LabGroup, QDistinct> distinctByName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension LabGroupQueryProperty
+    on QueryBuilder<LabGroup, LabGroup, QQueryProperty> {
+  QueryBuilder<LabGroup, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<LabGroup, String, QQueryOperations> nameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'name');
+    });
+  }
+}
+
+// coverage:ignore-file
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
+
+extension GetTransactionLogCollection on Isar {
+  IsarCollection<TransactionLog> get transactionLogs => this.collection();
+}
+
+const TransactionLogSchema = CollectionSchema(
+  name: r'TransactionLog',
+  id: -2041525662129,
+  properties: {
+    r'isGroupIssue': PropertySchema(
+      id: 0,
+      name: r'isGroupIssue',
+      type: IsarType.bool,
+    ),
+    r'isReturned': PropertySchema(
+      id: 1,
+      name: r'isReturned',
+      type: IsarType.bool,
+    ),
+    r'isSynced': PropertySchema(
+      id: 2,
+      name: r'isSynced',
+      type: IsarType.bool,
+    ),
+    r'issuedTo': PropertySchema(
+      id: 3,
+      name: r'issuedTo',
+      type: IsarType.string,
+    ),
+    r'timeBorrowed': PropertySchema(
+      id: 4,
+      name: r'timeBorrowed',
+      type: IsarType.dateTime,
+    ),
+    r'timeReturned': PropertySchema(
+      id: 5,
+      name: r'timeReturned',
+      type: IsarType.dateTime,
+    ),
+    r'toolName': PropertySchema(
+      id: 6,
+      name: r'toolName',
+      type: IsarType.string,
+    )
+  },
+  estimateSize: _transactionLogEstimateSize,
+  serialize: _transactionLogSerialize,
+  deserialize: _transactionLogDeserialize,
+  deserializeProp: _transactionLogDeserializeProp,
+  idName: r'id',
+  indexes: {},
+  links: {},
+  embeddedSchemas: {},
+  getId: _transactionLogGetId,
+  getLinks: _transactionLogGetLinks,
+  attach: _transactionLogAttach,
+  version: '3.1.0+1',
+);
+
+int _transactionLogEstimateSize(
+  TransactionLog object,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  var bytesCount = offsets.last;
+  bytesCount += 3 + object.issuedTo.length * 3;
+  bytesCount += 3 + object.toolName.length * 3;
+  return bytesCount;
+}
+
+void _transactionLogSerialize(
+  TransactionLog object,
+  IsarWriter writer,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  writer.writeBool(offsets[0], object.isGroupIssue);
+  writer.writeBool(offsets[1], object.isReturned);
+  writer.writeBool(offsets[2], object.isSynced);
+  writer.writeString(offsets[3], object.issuedTo);
+  writer.writeDateTime(offsets[4], object.timeBorrowed);
+  writer.writeDateTime(offsets[5], object.timeReturned);
+  writer.writeString(offsets[6], object.toolName);
+}
+
+TransactionLog _transactionLogDeserialize(
+  Id id,
+  IsarReader reader,
+  List<int> offsets,
+  Map<Type, List<int>> allOffsets,
+) {
+  final object = TransactionLog(
+    isGroupIssue: reader.readBoolOrNull(offsets[0]) ?? false,
+    isReturned: reader.readBoolOrNull(offsets[1]) ?? false,
+    isSynced: reader.readBoolOrNull(offsets[2]) ?? false,
+    issuedTo: reader.readString(offsets[3]),
+    timeBorrowed: reader.readDateTime(offsets[4]),
+    toolName: reader.readString(offsets[6]),
+  );
+  object.id = id;
+  object.timeReturned = reader.readDateTimeOrNull(offsets[5]);
+  return object;
+}
+
+P _transactionLogDeserializeProp<P>(
+  IsarReader reader,
+  int propertyId,
+  int offset,
+  Map<Type, List<int>> allOffsets,
+) {
+  switch (propertyId) {
+    case 0:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 1:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 2:
+      return (reader.readBoolOrNull(offset) ?? false) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
+      return (reader.readDateTime(offset)) as P;
+    case 5:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 6:
+      return (reader.readString(offset)) as P;
+    default:
+      throw IsarError('Unknown property with id $propertyId');
+  }
+}
+
+Id _transactionLogGetId(TransactionLog object) {
+  return object.id;
+}
+
+List<IsarLinkBase<dynamic>> _transactionLogGetLinks(TransactionLog object) {
+  return [];
+}
+
+void _transactionLogAttach(
+    IsarCollection<dynamic> col, Id id, TransactionLog object) {
+  object.id = id;
+}
+
+extension TransactionLogQueryWhereSort
+    on QueryBuilder<TransactionLog, TransactionLog, QWhere> {
+  QueryBuilder<TransactionLog, TransactionLog, QAfterWhere> anyId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(const IdWhereClause.any());
+    });
+  }
+}
+
+extension TransactionLogQueryWhere
+    on QueryBuilder<TransactionLog, TransactionLog, QWhereClause> {
+  QueryBuilder<TransactionLog, TransactionLog, QAfterWhereClause> idEqualTo(
+      Id id) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: id,
+        upper: id,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterWhereClause> idNotEqualTo(
+      Id id) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            )
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IdWhereClause.greaterThan(lower: id, includeLower: false),
+            )
+            .addWhereClause(
+              IdWhereClause.lessThan(upper: id, includeUpper: false),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterWhereClause> idGreaterThan(
+      Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.greaterThan(lower: id, includeLower: include),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterWhereClause> idLessThan(
+      Id id,
+      {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IdWhereClause.lessThan(upper: id, includeUpper: include),
+      );
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterWhereClause> idBetween(
+    Id lowerId,
+    Id upperId, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IdWhereClause.between(
+        lower: lowerId,
+        includeLower: includeLower,
+        upper: upperId,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+}
+
+extension TransactionLogQueryFilter
+    on QueryBuilder<TransactionLog, TransactionLog, QFilterCondition> {
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition> idEqualTo(
+      Id value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      idGreaterThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      idLessThan(
+    Id value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'id',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition> idBetween(
+    Id lower,
+    Id upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      isGroupIssueEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isGroupIssue',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      isReturnedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isReturned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      isSyncedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isSynced',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'issuedTo',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'issuedTo',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'issuedTo',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'issuedTo',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'issuedTo',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'issuedTo',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'issuedTo',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'issuedTo',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'issuedTo',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      issuedToIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'issuedTo',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeBorrowedEqualTo(DateTime value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'timeBorrowed',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeBorrowedGreaterThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'timeBorrowed',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeBorrowedLessThan(
+    DateTime value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'timeBorrowed',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeBorrowedBetween(
+    DateTime lower,
+    DateTime upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'timeBorrowed',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeReturnedIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'timeReturned',
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeReturnedIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'timeReturned',
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeReturnedEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'timeReturned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeReturnedGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'timeReturned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeReturnedLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'timeReturned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      timeReturnedBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'timeReturned',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'toolName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'toolName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'toolName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'toolName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'toolName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'toolName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'toolName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'toolName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'toolName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterFilterCondition>
+      toolNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'toolName',
+        value: '',
+      ));
+    });
+  }
+}
+
+extension TransactionLogQueryObject
+    on QueryBuilder<TransactionLog, TransactionLog, QFilterCondition> {}
+
+extension TransactionLogQueryLinks
+    on QueryBuilder<TransactionLog, TransactionLog, QFilterCondition> {}
+
+extension TransactionLogQuerySortBy
+    on QueryBuilder<TransactionLog, TransactionLog, QSortBy> {
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIsGroupIssue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isGroupIssue', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIsGroupIssueDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isGroupIssue', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIsReturned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReturned', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIsReturnedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReturned', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> sortByIsSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIsSyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> sortByIssuedTo() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'issuedTo', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByIssuedToDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'issuedTo', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByTimeBorrowed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeBorrowed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByTimeBorrowedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeBorrowed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByTimeReturned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeReturned', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByTimeReturnedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeReturned', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> sortByToolName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'toolName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      sortByToolNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'toolName', Sort.desc);
+    });
+  }
+}
+
+extension TransactionLogQuerySortThenBy
+    on QueryBuilder<TransactionLog, TransactionLog, QSortThenBy> {
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenById() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenByIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIsGroupIssue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isGroupIssue', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIsGroupIssueDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isGroupIssue', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIsReturned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReturned', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIsReturnedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isReturned', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenByIsSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIsSyncedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isSynced', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenByIssuedTo() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'issuedTo', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByIssuedToDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'issuedTo', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByTimeBorrowed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeBorrowed', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByTimeBorrowedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeBorrowed', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByTimeReturned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeReturned', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByTimeReturnedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'timeReturned', Sort.desc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy> thenByToolName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'toolName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QAfterSortBy>
+      thenByToolNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'toolName', Sort.desc);
+    });
+  }
+}
+
+extension TransactionLogQueryWhereDistinct
+    on QueryBuilder<TransactionLog, TransactionLog, QDistinct> {
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct>
+      distinctByIsGroupIssue() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isGroupIssue');
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct>
+      distinctByIsReturned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isReturned');
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct> distinctByIsSynced() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isSynced');
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct> distinctByIssuedTo(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'issuedTo', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct>
+      distinctByTimeBorrowed() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'timeBorrowed');
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct>
+      distinctByTimeReturned() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'timeReturned');
+    });
+  }
+
+  QueryBuilder<TransactionLog, TransactionLog, QDistinct> distinctByToolName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'toolName', caseSensitive: caseSensitive);
+    });
+  }
+}
+
+extension TransactionLogQueryProperty
+    on QueryBuilder<TransactionLog, TransactionLog, QQueryProperty> {
+  QueryBuilder<TransactionLog, int, QQueryOperations> idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<TransactionLog, bool, QQueryOperations> isGroupIssueProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isGroupIssue');
+    });
+  }
+
+  QueryBuilder<TransactionLog, bool, QQueryOperations> isReturnedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isReturned');
+    });
+  }
+
+  QueryBuilder<TransactionLog, bool, QQueryOperations> isSyncedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isSynced');
+    });
+  }
+
+  QueryBuilder<TransactionLog, String, QQueryOperations> issuedToProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'issuedTo');
+    });
+  }
+
+  QueryBuilder<TransactionLog, DateTime, QQueryOperations>
+      timeBorrowedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'timeBorrowed');
+    });
+  }
+
+  QueryBuilder<TransactionLog, DateTime?, QQueryOperations>
+      timeReturnedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'timeReturned');
+    });
+  }
+
+  QueryBuilder<TransactionLog, String, QQueryOperations> toolNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'toolName');
+    });
+  }
 }
 </file>
 
@@ -2741,6 +6163,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
+  cross_file:
+    dependency: transitive
+    description:
+      name: cross_file
+      sha256: "28bb3ae56f117b5aec029d702a90f57d285cd975c3c5c281eaca38dbc47c5937"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.5+2"
   crypto:
     dependency: transitive
     description:
@@ -2773,6 +6203,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
+  dartx:
+    dependency: transitive
+    description:
+      name: dartx
+      sha256: "8b25435617027257d43e6508b5fe061012880ddfdaa75a71d607c3de2a13d244"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   dbus:
     dependency: transitive
     description:
@@ -2821,6 +6259,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
+  file_picker:
+    dependency: "direct main"
+    description:
+      name: file_picker
+      sha256: "57d9a1dd5063f85fa3107fb42d1faffda52fdc948cefd5fe5ea85267a5fc7343"
+      url: "https://pub.dev"
+    source: hosted
+    version: "10.3.10"
   fixnum:
     dependency: transitive
     description:
@@ -2850,6 +6296,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  flutter_plugin_android_lifecycle:
+    dependency: transitive
+    description:
+      name: flutter_plugin_android_lifecycle
+      sha256: ee8068e0e1cd16c4a82714119918efdeed33b3ba7772c54b5d094ab53f9b7fd1
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.33"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -2997,7 +6451,7 @@ packages:
     source: hosted
     version: "1.0.5"
   isar:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: isar
       sha256: "99165dadb2cf2329d3140198363a7e7bff9bbd441871898a87e26914d25cf1ea"
@@ -3009,6 +6463,14 @@ packages:
     description:
       name: isar_flutter_libs
       sha256: bc6768cc4b9c61aabff77152e7f33b4b17d2fc93134f7af1c3dd51500fe8d5e8
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0+1"
+  isar_generator:
+    dependency: "direct dev"
+    description:
+      name: isar_generator
+      sha256: "76c121e1295a30423604f2f819bc255bc79f852f3bc8743a24017df6068ad133"
       url: "https://pub.dev"
     source: hosted
     version: "3.1.0+1"
@@ -3465,6 +6927,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  source_gen:
+    dependency: transitive
+    description:
+      name: source_gen
+      sha256: "14658ba5f669685cd3d63701d01b31ea748310f7ab854e471962670abcf57832"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.5.0"
   source_span:
     dependency: transitive
     description:
@@ -3529,6 +6999,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.12.0"
+  syncfusion_flutter_core:
+    dependency: transitive
+    description:
+      name: syncfusion_flutter_core
+      sha256: "080c4a57f12cb03869c863f6b33fb170ce9653ac741281f11ff8e067dc96fe99"
+      url: "https://pub.dev"
+    source: hosted
+    version: "32.2.8"
+  syncfusion_flutter_pdf:
+    dependency: "direct main"
+    description:
+      name: syncfusion_flutter_pdf
+      sha256: b4cd43b6f0ea9f0265a16de9b8b2cc8a31c13dfa4cfad2df496ae92800ce76d6
+      url: "https://pub.dev"
+    source: hosted
+    version: "32.2.8"
   term_glyph:
     dependency: transitive
     description:
@@ -3545,6 +7031,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.7"
+  time:
+    dependency: transitive
+    description:
+      name: time
+      sha256: "46187cf30bffdab28c56be9a63861b36e4ab7347bf403297595d6a97e10c789f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.6"
   timing:
     dependency: transitive
     description:
@@ -3681,6 +7175,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.3"
+  win32:
+    dependency: transitive
+    description:
+      name: win32
+      sha256: d7cb55e04cd34096cd3a79b3330245f54cb96a370a1c27adb3c84b917de8b08e
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.15.0"
   window_manager:
     dependency: "direct main"
     description:
@@ -3705,6 +7207,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.6.1"
+  xxh3:
+    dependency: transitive
+    description:
+      name: xxh3
+      sha256: "399a0438f5d426785723c99da6b16e136f4953fb1e9db0bf270bd41dd4619916"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   yaml:
     dependency: transitive
     description:
@@ -3778,6 +7288,9 @@ dependencies:
   pdf: ^3.11.3
   printing: ^5.14.2
   shared_preferences: ^2.5.4
+  isar: ^3.1.0+1
+  file_picker: ^10.3.10
+  syncfusion_flutter_pdf: ^32.2.8
 
 dev_dependencies:
   flutter_test:
@@ -3790,6 +7303,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   build_runner: ^2.4.13
+  isar_generator: ^3.1.0+1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -3837,53 +7351,46 @@ flutter:
 </file>
 
 <file path="lib/main.dart">
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:isar/isar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart' as sync_pdf; 
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// --- DATA MODELS ---
-class Tool {
-  final String id;
-  final String name;
-  final String category;
-  bool isAvailable;
-  Tool({required this.id, required this.name, required this.category, this.isAvailable = true});
-}
-
-class Student {
-  final String admNumber;
-  final String name;
-  final String? groupName;
-  Student({required this.admNumber, required this.name, this.groupName});
-}
-
-class LabGroup {
-  final String name;
-  LabGroup({required this.name});
-}
-
-class TransactionLog {
-  final int id;
-  final String toolName;
-  final String issuedTo;
-  final bool isGroupIssue;
-  final DateTime timeBorrowed;
-  TransactionLog({required this.id, required this.toolName, required this.issuedTo, this.isGroupIssue = false, required this.timeBorrowed});
-}
+import 'data/schemas.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Connect to Supabase
+  // --- INITIALIZE SUPABASE ---
   await Supabase.initialize(
-    url: 'YOUR_SUPABASE_URL_HERE', 
-    anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE'
+    url: 'https://htvyekhsxzctvlltqtsq.supabase.co', 
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0dnlla2hzeHpjdHZsbHRxdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDA1NjMsImV4cCI6MjA4NjU3NjU2M30.F8DUOG6q9ynw1IbIkn1Q1GJfICL_XvJKb9V-AlPCuEw'
   );
-  
+
+  // --- HYBRID ARCHITECTURE ---
+  // If on Desktop, open Isar. If on Web, leave it null.
+  Isar? localIsar;
+  if (!kIsWeb) {
+    final dir = await getApplicationDocumentsDirectory();
+    localIsar = await Isar.open(
+      [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
+      directory: dir.path,
+    );
+  }
+
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => LabState())],
+      providers: [ChangeNotifierProvider(create: (_) => LabState(localIsar))],
       child: const KinapLabApp(),
     ),
   );
@@ -3895,445 +7402,753 @@ class KinapLabApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'KINAP Mechatronics Lab',
+      title: 'KINAP Mechatronics POS',
       theme: ThemeData(
         useMaterial3: true,
         textTheme: GoogleFonts.outfitTextTheme(),
-        // BRANDING UPDATED TO KINAP RED (#D32F2F)
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFD32F2F)),
         scaffoldBackgroundColor: const Color(0xFFF0F2F5),
       ),
-      home: const DashboardScreen(),
+      home: const PosDashboard(),
     );
   }
 }
 
 // --- STATE MANAGEMENT ---
 class LabState extends ChangeNotifier {
-  final _supabase = Supabase.instance.client;
+  final Isar? isar; // Now nullable to support Web
+  bool get isWeb => isar == null; 
   
-  List<Tool> tools = [];
-  List<Student> students = [];
-  List<LabGroup> groups = [LabGroup(name: "DIM2509B"), LabGroup(name: "DIM2509A"), LabGroup(name: "DIM2505B"), LabGroup(name: "DIM2505A"), LabGroup(name: "DIM2409B"), LabGroup(name: "DIM2409A"), LabGroup(name: "DIM2405"), LabGroup(name: "DIM2309")];
+  List<Student> allStudents = [];
+  List<Student> filteredStudents = [];
   List<TransactionLog> activeLoans = [];
-  List<Map<String, dynamic>> pendingRequests = [];
-
-  Student? selectedStudent;
-  LabGroup? selectedGroup;
-  List<Tool> selectedTools = [];
   
-  String studentSearchQuery = '';
+  Student? selectedStudent;
+  List<String> cartItems = []; 
+  String searchQuery = '';
+  String? selectedClassFilter; 
+  
+  bool isSyncing = false; 
 
-  LabState() { _init(); }
-
-  void _init() async {
-    await refresh();
-    listenToLiveQueue();
+  LabState(this.isar) {
+    _init();
   }
 
-  void listenToLiveQueue() {
-    _supabase.from('tool_requests').stream(primaryKey: ['id']).eq('status', 'PENDING').order('created_at', ascending: true).listen((data) {
-      pendingRequests = data;
-      notifyListeners();
-    });
+  Future<void> _init() async {
+    await refreshData();
   }
 
-  Future<void> refresh() async {
-    try {
-      final toolsData = await _supabase.from('tools').select().order('name');
-      tools = toolsData.map((t) => Tool(id: t['id'].toString(), name: t['name'], category: t['category'] ?? 'General', isAvailable: t['is_available'] ?? true)).toList();
+  Future<void> refreshData() async {
+    if (!isWeb) {
+      // 1. DESKTOP/OFFLINE MODE: Read from Isar
+      allStudents = await isar!.students.where().findAll();
+      activeLoans = await isar!.transactionLogs.filter().isReturnedEqualTo(false).sortByTimeBorrowedDesc().findAll();
+    } else {
+      // 2. WEB/TRAINER MODE: Read directly from Supabase
+      try {
+        final supabase = Supabase.instance.client;
+        
+        // Fetch Students
+        final studentRes = await supabase.from('students').select();
+        allStudents = studentRes.map((s) => Student(
+          admNumber: s['adm_number'], 
+          name: s['name'], 
+          groupName: s['group_name']
+        )).toList();
 
-      final studentsData = await _supabase.from('students').select().order('name');
-      students = studentsData.map((s) => Student(admNumber: s['adm_number'], name: s['name'], groupName: s['group_name'])).toList();
-
-      final loansData = await _supabase.from('transaction_logs').select().eq('is_returned', false).order('time_borrowed', ascending: false);
-      activeLoans = loansData.map((l) => TransactionLog(id: l['id'], toolName: l['tool_name'], issuedTo: l['issued_to'] ?? 'Unknown', isGroupIssue: l['is_group_issue'] ?? false, timeBorrowed: DateTime.parse(l['time_borrowed']))).toList();
-
-      notifyListeners();
-    } catch (e) { debugPrint("Error: $e"); }
-  }
-
-  List<Student> get filteredStudents {
-    if (studentSearchQuery.isEmpty) return students;
-    return students.where((s) {
-      final query = studentSearchQuery.toLowerCase();
-      return s.admNumber.toLowerCase().contains(query) || 
-             s.name.toLowerCase().contains(query);
-    }).toList();
-  }
-
-  void setStudentSearchQuery(String query) {
-    studentSearchQuery = query;
+        // Fetch Active Loans
+        final logRes = await supabase.from('transaction_logs').select().eq('is_returned', false).order('time_borrowed', ascending: false);
+        activeLoans = logRes.map((l) {
+          final log = TransactionLog(
+            toolName: l['tool_name'],
+            issuedTo: l['issued_to'],
+            timeBorrowed: DateTime.parse(l['time_borrowed']),
+            isGroupIssue: l['is_group_issue'] ?? false,
+            isReturned: false,
+            isSynced: true,
+          );
+          log.id = l['id'] ?? DateTime.now().millisecondsSinceEpoch; // Supabase ID mapping
+          return log;
+        }).toList();
+      } catch (e) {
+        print("Web Fetch Error: $e");
+      }
+    }
+    _applyFilter();
     notifyListeners();
   }
 
-  void selectStudent(Student s) { selectedStudent = s; selectedGroup = null; notifyListeners(); }
-  void selectGroup(LabGroup g) { selectedGroup = g; selectedStudent = null; notifyListeners(); }
-  void toggleToolSelection(Tool tool) { selectedTools.contains(tool) ? selectedTools.remove(tool) : selectedTools.add(tool); notifyListeners(); }
-
-  // NEW: Added phone parameter for manual entry
-  Future<void> issueTools({String phone = ''}) async {
-    if ((selectedStudent == null && selectedGroup == null) || selectedTools.isEmpty) return;
-    
-    String issuedToName = selectedStudent?.name ?? selectedGroup?.name ?? 'Unknown';
-    final isGroup = selectedGroup != null;
-
-    // Append the phone number to the log if provided
-    if (!isGroup && phone.isNotEmpty) {
-      issuedToName += ' ($phone)';
-    }
-
-    for (var tool in selectedTools) {
-      tool.isAvailable = false; 
-      await _supabase.from('transaction_logs').insert({'tool_name': tool.name, 'issued_to': issuedToName, 'is_group_issue': isGroup, 'time_borrowed': DateTime.now().toIso8601String(), 'is_returned': false, 'status': 'GOOD'});
-      await _supabase.from('tools').update({'is_available': false}).eq('id', tool.id);
-    }
-    selectedStudent = null; selectedGroup = null; selectedTools = [];
-    await refresh();
+  List<String> get uploadedClasses {
+    final classes = allStudents.map((s) => s.groupName ?? '').where((g) => g.isNotEmpty).toSet().toList();
+    classes.sort();
+    return classes;
   }
 
-  Future<void> approveQRRequest(Map<String, dynamic> request) async {
-    await _supabase.from('tool_requests').update({'status': 'ISSUED'}).eq('id', request['id']);
-    final List requestedTools = request['tools_requested'] ?? [];
-    for (var reqTool in requestedTools) {
-      final toolName = reqTool['tool'];
-      final tool = tools.firstWhere((t) => t.name == toolName && t.isAvailable, orElse: () => Tool(id: '', name: '', category: ''));
-      if (tool.id.isNotEmpty) {
-        await _supabase.from('transaction_logs').insert({'tool_name': tool.name, 'issued_to': request['student_name'] + " (QR)", 'is_group_issue': false, 'time_borrowed': DateTime.now().toIso8601String(), 'is_returned': false, 'status': 'GOOD'});
-        await _supabase.from('tools').update({'is_available': false}).eq('id', tool.id);
+  void searchStudent(String query) {
+    searchQuery = query.trim().toLowerCase();
+    _applyFilter();
+  }
+
+  void toggleClassFilter(String className) {
+    if (selectedClassFilter == className) {
+      selectedClassFilter = null; 
+    } else {
+      selectedClassFilter = className; 
+    }
+    _applyFilter();
+  }
+
+  void _applyFilter() {
+    var tempList = allStudents;
+    if (selectedClassFilter != null) {
+      tempList = tempList.where((s) => s.groupName == selectedClassFilter).toList();
+    }
+    if (searchQuery.isNotEmpty) {
+      final tokens = searchQuery.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+      tempList = tempList.where((s) {
+        final searchableString = '${s.admNumber} ${s.name}'.replaceAll('/', '').toLowerCase();
+        return tokens.every((token) => searchableString.contains(token));
+      }).toList();
+    }
+    filteredStudents = tempList.take(50).toList(); 
+    notifyListeners();
+  }
+
+  void selectStudent(Student s) {
+    selectedStudent = s;
+    searchQuery = '';
+    notifyListeners();
+  }
+
+  void clearSelection() {
+    selectedStudent = null;
+    cartItems.clear();
+    notifyListeners();
+  }
+
+  void addToCart(String item) {
+    if (item.trim().isNotEmpty) {
+      cartItems.add(item.trim());
+      notifyListeners();
+    }
+  }
+
+  void removeFromCart(String item) {
+    cartItems.remove(item);
+    notifyListeners();
+  }
+
+  Future<void> issueTools() async {
+    if (selectedStudent == null || cartItems.isEmpty) return;
+    final now = DateTime.now();
+    
+    if (!isWeb) {
+      // DESKTOP: Write to Isar
+      await isar!.writeTxn(() async {
+        for (var item in cartItems) {
+          final log = TransactionLog(
+            toolName: item,
+            issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+            timeBorrowed: now,
+            isGroupIssue: false,
+            isReturned: false,
+            isSynced: false,
+          );
+          await isar!.transactionLogs.put(log);
+        }
+      });
+    } else {
+      // WEB: Write directly to Supabase
+      final supabase = Supabase.instance.client;
+      for (var item in cartItems) {
+        await supabase.from('transaction_logs').insert({
+          'tool_name': item,
+          'issued_to': "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+          'is_group_issue': false,
+          'time_borrowed': now.toIso8601String(),
+          'is_returned': false,
+        });
       }
     }
-    await refresh();
+
+    clearSelection();
+    await refreshData();
   }
 
-  Future<void> returnItem(TransactionLog log) async {
-    await _supabase.from('transaction_logs').update({'is_returned': true, 'time_returned': DateTime.now().toIso8601String()}).eq('id', log.id);
-    await _supabase.from('tools').update({'is_available': true}).eq('name', log.toolName);
-    await refresh();
+  Future<void> returnTool(int logId) async {
+    if (!isWeb) {
+      // DESKTOP: Update Isar
+      await isar!.writeTxn(() async {
+        final log = await isar!.transactionLogs.get(logId);
+        if (log != null) {
+          log.isReturned = true;
+          log.timeReturned = DateTime.now();
+          log.isSynced = false; 
+          await isar!.transactionLogs.put(log);
+        }
+      });
+    } else {
+      // WEB: Update Supabase directly
+      await Supabase.instance.client.from('transaction_logs').update({
+        'is_returned': true,
+        'time_returned': DateTime.now().toIso8601String()
+      }).eq('id', logId);
+    }
+    await refreshData();
+  }
+
+  Future<int> bulkImportFromPdf(String className) async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    if (result == null || result.files.single.path == null) return -1; 
+
+    final File file = File(result.files.single.path!);
+    final sync_pdf.PdfDocument document = sync_pdf.PdfDocument(inputBytes: await file.readAsBytes());
+    final String rawText = sync_pdf.PdfTextExtractor(document).extractText();
+    document.dispose();
+
+    int importedCount = 0;
+    final RegExp admExp = RegExp(r'(DIM|MET5|ΜΕΤ5)\s*/\s*\d{4}\s*/\s*\d{2}', caseSensitive: false);
+    final lines = rawText.split('\n');
+    
+    if (!isWeb) {
+      // DESKTOP: Process with Isar
+      await isar!.writeTxn(() async {
+        for (int i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          final match = admExp.firstMatch(line);
+          if (match != null) {
+            final adm = match.group(0)!.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+            var name = line.substring(match.end).replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim();
+            if (name.isEmpty && i + 1 < lines.length) {
+                final nextLine = lines[i+1];
+                if (!admExp.hasMatch(nextLine)) { name = nextLine.replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim(); }
+            }
+            if (name.isEmpty) name = "Unknown Name";
+
+            final existing = await isar!.students.filter().admNumberEqualTo(adm).findFirst();
+            if (existing == null) {
+              await isar!.students.put(Student(admNumber: adm, name: name, groupName: className));
+              importedCount++;
+            } else {
+              existing.name = name != "Unknown Name" ? name : existing.name;
+              existing.groupName = className;
+              await isar!.students.put(existing);
+              importedCount++;
+            }
+          }
+        }
+      });
+    } else {
+      // WEB: PDF upload directly to Supabase isn't supported via local file picker in browser easily without converting to bytes. 
+      // It's highly recommended to do Bulk Imports on the Desktop app, then click Sync!
+    }
+    
+    selectedClassFilter = className;
+    searchQuery = '';
+    await refreshData();
+    return importedCount;
+  }
+
+  Future<void> syncWithCloud(BuildContext context) async {
+    if (isWeb) {
+      // If on the web, it's already live! Just refresh the data.
+      await refreshData();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Web Portal is Live! ☁️✅"), backgroundColor: Colors.green));
+      }
+      return;
+    }
+
+    if (isSyncing) return;
+    isSyncing = true;
+    notifyListeners();
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // 1. PUSH STUDENTS TO SUPABASE
+      final localStudents = await isar!.students.where().findAll();
+      for (var student in localStudents) {
+        await supabase.from('students').upsert({
+          'adm_number': student.admNumber,
+          'name': student.name,
+          'group_name': student.groupName,
+        }, onConflict: 'adm_number'); 
+      }
+
+      // 2. PULL STUDENTS FROM SUPABASE
+      final cloudStudents = await supabase.from('students').select();
+      await isar!.writeTxn(() async {
+        for (var row in cloudStudents) {
+          final adm = row['adm_number'];
+          final existing = await isar!.students.filter().admNumberEqualTo(adm).findFirst();
+          if (existing == null) {
+            await isar!.students.put(Student(
+              admNumber: adm,
+              name: row['name'],
+              groupName: row['group_name']
+            ));
+          }
+        }
+      });
+
+      // 3. PUSH UNSYNCED LOGS TO SUPABASE
+      final unsyncedLogs = await isar!.transactionLogs.filter().isSyncedEqualTo(false).findAll();
+      for (var log in unsyncedLogs) {
+        await supabase.from('transaction_logs').insert({
+          'tool_name': log.toolName,
+          'issued_to': log.issuedTo,
+          'is_group_issue': log.isGroupIssue,
+          'time_borrowed': log.timeBorrowed.toIso8601String(),
+          'is_returned': log.isReturned,
+          'time_returned': log.timeReturned?.toIso8601String(),
+        });
+      }
+
+      // Mark local logs as synced
+      await isar!.writeTxn(() async {
+        for (var log in unsyncedLogs) {
+          log.isSynced = true;
+          await isar!.transactionLogs.put(log);
+        }
+      });
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Cloud Sync Complete! ☁️✅"), backgroundColor: Colors.green));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sync failed. Check connection: $e"), backgroundColor: Colors.red));
+      }
+    } finally {
+      isSyncing = false;
+      await refreshData();
+    }
   }
 }
 
 // --- UI DASHBOARD ---
-class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
-  @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
+class PosDashboard extends StatelessWidget {
+  const PosDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.of(context).size.width > 900;
-    if (isDesktop) return Scaffold(appBar: _buildAppBar(context, isDesktop), body: const DesktopLayout());
+    final isDesktop = MediaQuery.of(context).size.width > 800;
+
     return Scaffold(
-      appBar: _buildAppBar(context, isDesktop),
-      body: TabBarView(controller: _tabController, children: const [SelectionPanel(), ToolGridPanel(), ActionPanel()]),
-      bottomNavigationBar: Container(
-        color: const Color(0xFFD32F2F), // Red Navigation
-        child: TabBar(
-          controller: _tabController, indicatorColor: Colors.white, labelColor: Colors.white, unselectedLabelColor: Colors.white60,
-          tabs: const [Tab(icon: Icon(Icons.people), text: "Select"), Tab(icon: Icon(Icons.build), text: "Tools"), Tab(icon: Icon(Icons.shopping_cart), text: "Cart")],
-        ),
+      appBar: AppBar(
+        title: const Text("KINAP Lab POS", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFFD32F2F),
+        actions: [
+          Consumer<LabState>(
+            builder: (context, state, child) {
+              return IconButton(
+                icon: state.isSyncing 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.cloud_sync, color: Colors.white),
+                tooltip: "Sync with Cloud",
+                onPressed: state.isSyncing ? null : () => state.syncWithCloud(context),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_add, color: Colors.white),
+            tooltip: "Bulk Import Class",
+            onPressed: () => _showBulkImportDialog(context),
+          ),
+          const SizedBox(width: 16),
+        ],
       ),
+      body: isDesktop ? const DesktopPosLayout() : const MobilePosLayout(),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, bool isDesktop) {
-    return AppBar(
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(isDesktop ? "THE KIAMBU NATIONAL POLYTECHNIC" : "KINAP Inventory", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, letterSpacing: 1.0)),
-          if (isDesktop) const Text("Mechanical, Mechatronics & Automotive Engineering Department", style: TextStyle(fontSize: 12, color: Colors.white70)),
+  void _showBulkImportDialog(BuildContext context) {
+    final classCtrl = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text("Import Class from PDF"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Enter the class name, then attach the PDF file to auto-import students.", style: TextStyle(fontSize: 14)),
+            const SizedBox(height: 15),
+            TextField(
+              controller: classCtrl,
+              decoration: const InputDecoration(labelText: "Class Name (e.g., DIM2409B)", border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text("Cancel")),
+          ElevatedButton.icon(
+            onPressed: () async {
+              if (classCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter a class name!")));
+                return;
+              }
+              Navigator.pop(dialogContext); 
+              
+              try {
+                final count = await context.read<LabState>().bulkImportFromPdf(classCtrl.text.trim().toUpperCase());
+                if (count > 0 && context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Success: Extracted $count students!"), backgroundColor: Colors.green));
+                } else if (count == 0 && context.mounted) {
+                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No students found in that PDF."), backgroundColor: Colors.orange));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error reading PDF: $e"), backgroundColor: Colors.red));
+                }
+              }
+            },
+            icon: const Icon(Icons.upload_file),
+            label: const Text("Select PDF"),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
+          )
         ],
       ),
-      backgroundColor: const Color(0xFFD32F2F), // KINAP RED
-      actions: [
-        if (isDesktop)
-          Padding(
-            padding: const EdgeInsets.only(right: 20.0),
-            child: Chip(label: Text("Cloud Sync Active", style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.bold)), backgroundColor: Colors.green[50], avatar: const Icon(Icons.wifi, color: Colors.green, size: 18)),
-          )
-      ],
     );
   }
 }
 
-class DesktopLayout extends StatelessWidget {
-  const DesktopLayout({super.key});
+// --- DESKTOP LAYOUT ---
+class DesktopPosLayout extends StatelessWidget {
+  const DesktopPosLayout({super.key});
   @override
   Widget build(BuildContext context) {
     return const Row(
       children: [
-        Expanded(flex: 3, child: SelectionPanel()), 
+        Expanded(flex: 3, child: SmartSearchPanel()),
         VerticalDivider(width: 1),
-        Expanded(flex: 5, child: ToolGridPanel()),
+        Expanded(flex: 3, child: ToolEntryPanel()),
         VerticalDivider(width: 1),
-        Expanded(flex: 3, child: ActionPanel()),
+        Expanded(flex: 4, child: CartAndLoansPanel()),
       ],
     );
   }
 }
 
-class SelectionPanel extends StatelessWidget {
-  const SelectionPanel({super.key});
+// --- MOBILE LAYOUT ---
+class MobilePosLayout extends StatelessWidget {
+  const MobilePosLayout({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return const Column(
+      children: [
+        Expanded(flex: 2, child: SmartSearchPanel()),
+        Divider(height: 1, thickness: 2),
+        Expanded(flex: 3, child: ToolEntryPanel()),
+        Divider(height: 1, thickness: 2),
+        Expanded(flex: 4, child: CartAndLoansPanel()),
+      ],
+    );
+  }
+}
 
+// --- 1. SMART SEARCH PANEL ---
+class SmartSearchPanel extends StatelessWidget {
+  const SmartSearchPanel({super.key});
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
-    
-    return DefaultTabController(
-      length: 3,
-      child: Container(
-        color: Colors.white,
-        child: Column(
-          children: [
-            Container(
-              color: const Color(0xFF1A1A1A), // Black tab header to complement the Red
-              child: const TabBar(
-                labelColor: Colors.white, unselectedLabelColor: Colors.white54, indicatorColor: Color(0xFFD32F2F), // Red indicator
-                tabs: [Tab(text: "LIVE QR"), Tab(text: "Students"), Tab(text: "Groups")],
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("1. Select Student", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 10),
+          
+          if (state.uploadedClasses.isNotEmpty)
+            SizedBox(
+              height: 40,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: state.uploadedClasses.length,
+                itemBuilder: (context, index) {
+                  final className = state.uploadedClasses[index];
+                  final isSelected = state.selectedClassFilter == className;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: FilterChip(
+                      label: Text(className, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      selected: isSelected,
+                      selectedColor: Colors.red.shade100,
+                      checkmarkColor: const Color(0xFFD32F2F),
+                      onSelected: (_) => state.toggleClassFilter(className),
+                    ),
+                  );
+                },
               ),
+            )
+          else
+            const Text("No classes loaded. Click the top right icon to import PDFs.", style: TextStyle(fontSize: 12, color: Colors.orange, fontStyle: FontStyle.italic)),
+          
+          const SizedBox(height: 10),
+
+          TextField(
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: "Search ID or Name...",
+              prefixIcon: const Icon(Icons.search, color: Color(0xFFD32F2F)),
+              filled: true,
+              fillColor: Colors.grey.shade100,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
             ),
+            onChanged: (val) => state.searchStudent(val),
+          ),
+          const SizedBox(height: 10),
+          
+          if (state.selectedStudent != null)
+            Card(
+              color: Colors.red.shade50,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: const BorderSide(color: Color(0xFFD32F2F))),
+              child: ListTile(
+                title: Text(state.selectedStudent!.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text("${state.selectedStudent!.admNumber} • ${state.selectedStudent!.groupName ?? ''}"),
+                trailing: IconButton(icon: const Icon(Icons.close, color: Colors.red), onPressed: state.clearSelection),
+              ),
+            )
+          else if (state.searchQuery.isNotEmpty && state.filteredStudents.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text("No students found.", style: TextStyle(color: Colors.red)),
+            )
+          else
             Expanded(
-              child: TabBarView(
-                children: [
-                  // TAB 1: LIVE QR QUEUE
-                  state.pendingRequests.isEmpty
-                      ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.qr_code_scanner, size: 50, color: Colors.grey[300]), const SizedBox(height: 10), Text("Waiting for students...", style: TextStyle(color: Colors.grey[500]))]))
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: state.pendingRequests.length,
-                          itemBuilder: (context, index) {
-                            final req = state.pendingRequests[index];
-                            final List toolsList = req['tools_requested'] ?? [];
-                            return Card(
-                              color: Colors.red.shade50,
-                              child: ListTile(
-                                leading: const Icon(Icons.notifications_active, color: Color(0xFFD32F2F)),
-                                title: Text(req['student_name'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text("Class: ${req['class_name']}\nTools: ${toolsList.length}"),
-                                trailing: ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white), onPressed: () => state.approveQRRequest(req), child: const Text("APPROVE")),
-                              ),
-                            );
-                          },
-                        ),
-
-                  // TAB 2: STUDENTS
-                  Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: "Search Admission No. or Name...",
-                            prefixIcon: const Icon(Icons.search, color: Color(0xFFD32F2F)),
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                          ),
-                          onChanged: (value) => state.setStudentSearchQuery(value),
-                        ),
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          itemCount: state.filteredStudents.length,
-                          itemBuilder: (context, index) {
-                            final student = state.filteredStudents[index];
-                            final isSelected = state.selectedStudent?.admNumber == student.admNumber;
-                            return Card(
-                              elevation: 0,
-                              color: isSelected ? Colors.red.shade50 : Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                side: isSelected ? const BorderSide(color: Color(0xFFD32F2F), width: 1) : BorderSide(color: Colors.grey.shade200),
-                              ),
-                              child: ListTile(
-                                title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text("${student.admNumber} • ${student.groupName ?? ''}"),
-                                selected: isSelected,
-                                onTap: () => state.selectStudent(student),
-                                leading: CircleAvatar(
-                                  backgroundColor: isSelected ? const Color(0xFFD32F2F) : Colors.grey[200],
-                                  foregroundColor: isSelected ? Colors.white : Colors.black,
-                                  child: Text(student.name[0]),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // TAB 3: GROUPS
-                  ListView.builder(
-                    padding: const EdgeInsets.all(8),
-                    itemCount: state.groups.length,
-                    itemBuilder: (context, index) {
-                      final group = state.groups[index];
-                      final isSelected = state.selectedGroup?.name == group.name;
-                      return ListTile(
-                        title: Text(group.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        leading: Icon(Icons.workspaces, color: isSelected ? const Color(0xFFD32F2F) : Colors.grey),
-                        selected: isSelected,
-                        tileColor: isSelected ? Colors.red.shade50 : null,
-                        onTap: () => state.selectGroup(group),
-                      );
-                    },
-                  ),
-                ],
+              child: ListView.builder(
+                itemCount: state.filteredStudents.length,
+                itemBuilder: (context, index) {
+                  final student = state.filteredStudents[index];
+                  return ListTile(
+                    title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text("${student.admNumber} • ${student.groupName}"),
+                    onTap: () => state.selectStudent(student),
+                  );
+                },
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class ToolGridPanel extends StatelessWidget {
-  const ToolGridPanel({super.key});
+// --- 2. TOOL ENTRY PANEL ---
+class ToolEntryPanel extends StatefulWidget {
+  const ToolEntryPanel({super.key});
+  @override
+  State<ToolEntryPanel> createState() => _ToolEntryPanelState();
+}
+
+class _ToolEntryPanelState extends State<ToolEntryPanel> {
+  final _toolCtrl = TextEditingController();
+
+  void _submitTool(BuildContext context) {
+    if (_toolCtrl.text.isNotEmpty) {
+      context.read<LabState>().addToCart(_toolCtrl.text);
+      _toolCtrl.clear();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<LabState>();
+    final commonKeys = ["S21", "S22", "S23", "S24", "M1", "M2"];
+    
     return Container(
       color: const Color(0xFFFAFAFA),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("2. Select Tools to Issue", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const Text("2. Add Tools / Keys", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
           const SizedBox(height: 10),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 180, childAspectRatio: 1.2, crossAxisSpacing: 10, mainAxisSpacing: 10),
-              itemCount: state.tools.length,
-              itemBuilder: (context, index) {
-                final tool = state.tools[index];
-                final isSelected = state.selectedTools.contains(tool);
-                if (!tool.isAvailable) {
-                  return Container(decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(8)), child: Center(child: Text("${tool.name}\n(OUT)", textAlign: TextAlign.center, style: const TextStyle(color: Colors.red))));
-                }
-                return InkWell(
-                  onTap: () => state.toggleToolSelection(tool),
-                  child: Container(
-                    decoration: BoxDecoration(color: isSelected ? const Color(0xFF1A1A1A) : Colors.white, border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.build_circle_outlined, size: 30, color: isSelected ? Colors.white : const Color(0xFF1A1A1A)), const SizedBox(height: 5), Text(tool.name, textAlign: TextAlign.center, style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 12))]),
-                  ),
-                );
-              },
+          TextField(
+            controller: _toolCtrl,
+            decoration: InputDecoration(
+              hintText: "e.g., 1 Pliers, Multimeter...",
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.add_circle, color: Colors.green),
+                onPressed: () => _submitTool(context),
+              ),
+              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
             ),
+            onSubmitted: (_) => _submitTool(context),
           ),
+          const SizedBox(height: 20),
+          const Text("Quick Keys:", style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: commonKeys.map((keyLabel) => ActionChip(
+              label: Text(keyLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+              backgroundColor: Colors.grey.shade200,
+              onPressed: () => context.read<LabState>().addToCart("Key $keyLabel"),
+            )).toList(),
+          )
         ],
       ),
     );
   }
 }
 
-// --- UPDATED ACTION PANEL (CART) ---
-class ActionPanel extends StatefulWidget {
-  const ActionPanel({super.key});
-  @override
-  State<ActionPanel> createState() => _ActionPanelState();
-}
+// --- 3. CART & LOANS PANEL ---
+class CartAndLoansPanel extends StatelessWidget {
+  const CartAndLoansPanel({super.key});
 
-class _ActionPanelState extends State<ActionPanel> {
-  final _phoneController = TextEditingController();
+  Future<void> _shareOnWhatsApp(BuildContext context, List<TransactionLog> loans) async {
+    if (loans.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No active outings to share.")));
+      return;
+    }
 
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    super.dispose();
+    Map<String, List<String>> defaulters = {};
+    for (var log in loans) {
+      defaulters.putIfAbsent(log.issuedTo, () => []).add(log.toolName);
+    }
+
+    StringBuffer sb = StringBuffer();
+    sb.writeln("*🚨 KINAP MECHATRONICS LAB - UNRETURNED ITEMS 🚨*");
+    sb.writeln("Please return the following tools immediately to the lab:\n");
+
+    defaulters.forEach((student, tools) {
+      sb.writeln("👤 *$student*");
+      sb.writeln("🔧 Items: ${tools.join(', ')}");
+      sb.writeln("---");
+    });
+
+    final url = Uri.parse("https://wa.me/?text=${Uri.encodeComponent(sb.toString())}");
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Could not launch browser for WhatsApp.")));
+      }
+    }
+  }
+
+  Future<void> _printDefaulters(BuildContext context, List<TransactionLog> loans) async {
+    if (loans.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No active outings to print.")));
+      return;
+    }
+
+    Map<String, List<String>> defaulters = {};
+    for (var log in loans) {
+      defaulters.putIfAbsent(log.issuedTo, () => []).add(log.toolName);
+    }
+
+    final doc = pw.Document();
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text("KINAP MECHATRONICS LAB", style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+              pw.Text("UNRETURNED ITEMS REPORT", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 10),
+              pw.Text("Generated on: ${DateTime.now().toString().split('.')[0]}"),
+              pw.SizedBox(height: 20),
+              pw.Table.fromTextArray(
+                headers: ['Student Details', 'Items Borrowed'],
+                data: defaulters.entries.map((e) => [e.key, e.value.join(', ')]).toList(),
+                cellStyle: const pw.TextStyle(fontSize: 12),
+                headerStyle: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(color: PdfColors.red800),
+                cellPadding: const pw.EdgeInsets.all(8),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => doc.save(),
+      name: 'KINAP_Defaulters_Report.pdf'
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
-    final isGroup = state.selectedGroup != null;
-
+    
     return Column(
       children: [
-        // CART AREA
-        Expanded(
-          flex: 2,
-          child: Container(
-            color: Colors.red.shade50,
-            padding: const EdgeInsets.all(16),
-            width: double.infinity,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Confirm Manual Issue", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFD32F2F))),
-                const Divider(),
-                
-                // AUTO-FILL DISPLAY AREA
-                if (state.selectedStudent != null || state.selectedGroup != null) ...[
-                  Text(isGroup ? "Group:" : "Student Details:", style: TextStyle(color: Colors.grey[700], fontSize: 12)),
-                  Text(state.selectedStudent?.name ?? state.selectedGroup!.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  
-                  if (!isGroup) ...[
-                    Text("ADM: ${state.selectedStudent!.admNumber}  |  Class: ${state.selectedStudent!.groupName ?? 'N/A'}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                    const SizedBox(height: 10),
-                    // NEW: PHONE NUMBER MANUAL ENTRY
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'Phone Number (Optional)',
-                        prefixIcon: const Icon(Icons.phone, size: 18),
-                        isDense: true,
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ],
-                ] else 
-                  const Padding(padding: EdgeInsets.symmetric(vertical: 10), child: Text("Search for a student to auto-fill...", style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey))),
-                
-                const SizedBox(height: 10),
-                Expanded(child: SingleChildScrollView(child: Wrap(spacing: 5, children: state.selectedTools.map((t) => Chip(label: Text(t.name, style: const TextStyle(fontSize: 11)), onDeleted: () => state.toggleToolSelection(t), backgroundColor: Colors.white)).toList()))),
-                
-                SizedBox(
-                  width: double.infinity, height: 50,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
-                    onPressed: ((state.selectedStudent != null || state.selectedGroup != null) && state.selectedTools.isNotEmpty) 
-                      ? () {
-                          state.issueTools(phone: _phoneController.text.trim());
-                          _phoneController.clear(); // Clear the phone box after issue
-                        } 
-                      : null,
-                    icon: const Icon(Icons.check_circle), label: const Text("ISSUE TOOLS"),
-                  ),
-                )
-              ],
-            ),
+        // CART
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white,
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("3. Checkout", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 5,
+                children: state.cartItems.map((item) => Chip(
+                  label: Text(item),
+                  onDeleted: () => state.removeFromCart(item),
+                  backgroundColor: Colors.red.shade50,
+                )).toList(),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white),
+                  onPressed: (state.selectedStudent != null && state.cartItems.isNotEmpty) ? state.issueTools : null,
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text("ISSUE ITEMS", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              )
+            ],
           ),
         ),
+        const Divider(height: 1, thickness: 4, color: Color(0xFFF0F2F5)),
         
-        // ACTIVE LOANS LIST
+        // ACTIVE LOANS
         Expanded(
-          flex: 3,
           child: Container(
             color: Colors.white,
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Active Returns", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Active Outings", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.print, color: Color(0xFFD32F2F)),
+                          tooltip: "Print Defaulters Report",
+                          onPressed: () => _printDefaulters(context, state.activeLoans),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.share, color: Colors.green),
+                          tooltip: "Share to WhatsApp",
+                          onPressed: () => _shareOnWhatsApp(context, state.activeLoans),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+                const SizedBox(height: 5),
                 Expanded(
                   child: ListView.separated(
                     itemCount: state.activeLoans.length,
@@ -4342,10 +8157,13 @@ class _ActionPanelState extends State<ActionPanel> {
                       final loan = state.activeLoans[index];
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.access_time_filled, color: Colors.orange),
-                        title: Text(loan.issuedTo + (loan.isGroupIssue ? " (Group)" : ""), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text(loan.toolName, style: const TextStyle(fontSize: 12)),
-                        trailing: TextButton(onPressed: () => state.returnItem(loan), style: TextButton.styleFrom(foregroundColor: Colors.green), child: const Text("RETURN")),
+                        title: Text(loan.issuedTo.isNotEmpty ? loan.issuedTo : "Unknown Student", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        subtitle: Text(loan.toolName, style: const TextStyle(color: Color(0xFFD32F2F))),
+                        trailing: ElevatedButton(
+                          onPressed: () => state.returnTool(loan.id),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade50, foregroundColor: Colors.green.shade700, elevation: 0),
+                          child: const Text("RETURN"),
+                        ),
                       );
                     },
                   ),

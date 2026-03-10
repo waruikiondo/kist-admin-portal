@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // <-- NEW IMPORT ADDED HERE
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:isar/isar.dart';
@@ -15,34 +15,93 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'data/schemas.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // --- INITIALIZE SUPABASE ---
-  await Supabase.initialize(
-    url: 'https://htvyekhsxzctvlltqtsq.supabase.co', 
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0dnlla2hzeHpjdHZsbHRxdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDA1NjMsImV4cCI6MjA4NjU3NjU2M30.F8DUOG6q9ynw1IbIkn1Q1GJfICL_XvJKb9V-AlPCuEw'
-  );
+  // Run the app immediately to prevent the blank white screen
+  runApp(const AppBootstrapper());
+}
 
-  // --- FIX: WEB-SAFE DIRECTORY CHECK ---
-  String dirPath = ''; // Default to empty string for the web browser
-  if (!kIsWeb) {
-    // If we are on Linux/Windows, get the actual hard drive folder
-    final dir = await getApplicationDocumentsDirectory();
-    dirPath = dir.path;
+// --- NON-BLOCKING BOOTSTRAPPER ---
+class AppBootstrapper extends StatefulWidget {
+  const AppBootstrapper({super.key});
+
+  @override
+  State<AppBootstrapper> createState() => _AppBootstrapperState();
+}
+
+class _AppBootstrapperState extends State<AppBootstrapper> {
+  Isar? localIsar;
+  bool isInitializing = true;
+  String loadingStatus = "Waking up system...";
+
+  @override
+  void initState() {
+    super.initState();
+    _setupDatabases();
   }
 
-  final isar = await Isar.open(
-    [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
-    directory: dirPath, // Uses the safe path depending on the device
-  );
+  Future<void> _setupDatabases() async {
+    try {
+      setState(() => loadingStatus = "Connecting to cloud...");
+      // --- INITIALIZE SUPABASE ---
+      await Supabase.initialize(
+        url: 'https://htvyekhsxzctvlltqtsq.supabase.co', 
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0dnlla2hzeHpjdHZsbHRxdHNxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMDA1NjMsImV4cCI6MjA4NjU3NjU2M30.F8DUOG6q9ynw1IbIkn1Q1GJfICL_XvJKb9V-AlPCuEw'
+      );
 
-  runApp(
-    MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => LabState(isar))],
+      setState(() => loadingStatus = "Setting up local storage...");
+      // --- HYBRID ARCHITECTURE ---
+      if (!kIsWeb) {
+        final dir = await getApplicationDocumentsDirectory();
+        localIsar = await Isar.open(
+          [ToolSchema, StudentSchema, LabGroupSchema, TransactionLogSchema],
+          directory: dir.path,
+        );
+      }
+    } catch (e) {
+      debugPrint("Initialization error: $e");
+    } finally {
+      // Tell the UI we are done loading
+      if (mounted) {
+        setState(() {
+          isInitializing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show a sleek loading screen while waiting for Supabase/Isar
+    if (isInitializing) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          backgroundColor: const Color(0xFFD32F2F),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const CircularProgressIndicator(color: Colors.white),
+                const SizedBox(height: 20),
+                Text(
+                  loadingStatus,
+                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Once everything is loaded, boot up the main application
+    return MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => LabState(localIsar))],
       child: const KinapLabApp(),
-    ),
-  );
+    );
+  }
 }
 
 class KinapLabApp extends StatelessWidget {
@@ -65,7 +124,8 @@ class KinapLabApp extends StatelessWidget {
 
 // --- STATE MANAGEMENT ---
 class LabState extends ChangeNotifier {
-  final Isar isar;
+  final Isar? isar; // Now nullable to support Web
+  bool get isWeb => isar == null; 
   
   List<Student> allStudents = [];
   List<Student> filteredStudents = [];
@@ -76,7 +136,7 @@ class LabState extends ChangeNotifier {
   String searchQuery = '';
   String? selectedClassFilter; 
   
-  bool isSyncing = false; // Tracks if cloud sync is in progress
+  bool isSyncing = false; 
 
   LabState(this.isar) {
     _init();
@@ -87,8 +147,41 @@ class LabState extends ChangeNotifier {
   }
 
   Future<void> refreshData() async {
-    allStudents = await isar.students.where().findAll();
-    activeLoans = await isar.transactionLogs.filter().isReturnedEqualTo(false).sortByTimeBorrowedDesc().findAll();
+    if (!isWeb) {
+      // 1. DESKTOP/OFFLINE MODE: Read from Isar
+      allStudents = await isar!.students.where().findAll();
+      activeLoans = await isar!.transactionLogs.filter().isReturnedEqualTo(false).sortByTimeBorrowedDesc().findAll();
+    } else {
+      // 2. WEB/TRAINER MODE: Read directly from Supabase
+      try {
+        final supabase = Supabase.instance.client;
+        
+        // Fetch Students
+        final studentRes = await supabase.from('students').select();
+        allStudents = studentRes.map((s) => Student(
+          admNumber: s['adm_number'], 
+          name: s['name'], 
+          groupName: s['group_name']
+        )).toList();
+
+        // Fetch Active Loans
+        final logRes = await supabase.from('transaction_logs').select().eq('is_returned', false).order('time_borrowed', ascending: false);
+        activeLoans = logRes.map((l) {
+          final log = TransactionLog(
+            toolName: l['tool_name'],
+            issuedTo: l['issued_to'],
+            timeBorrowed: DateTime.parse(l['time_borrowed']),
+            isGroupIssue: l['is_group_issue'] ?? false,
+            isReturned: false,
+            isSynced: true,
+          );
+          log.id = l['id'] ?? DateTime.now().millisecondsSinceEpoch; // Supabase ID mapping
+          return log;
+        }).toList();
+      } catch (e) {
+        debugPrint("Web Fetch Error: $e");
+      }
+    }
     _applyFilter();
     notifyListeners();
   }
@@ -106,31 +199,25 @@ class LabState extends ChangeNotifier {
 
   void toggleClassFilter(String className) {
     if (selectedClassFilter == className) {
-      selectedClassFilter = null; // unselect
+      selectedClassFilter = null; 
     } else {
-      selectedClassFilter = className; // select
+      selectedClassFilter = className; 
     }
     _applyFilter();
   }
 
   void _applyFilter() {
     var tempList = allStudents;
-
-    // 1. Filter by Class Chip if selected
     if (selectedClassFilter != null) {
       tempList = tempList.where((s) => s.groupName == selectedClassFilter).toList();
     }
-
-    // 2. Supercharged Tokenized Search
     if (searchQuery.isNotEmpty) {
       final tokens = searchQuery.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
-
       tempList = tempList.where((s) {
         final searchableString = '${s.admNumber} ${s.name}'.replaceAll('/', '').toLowerCase();
         return tokens.every((token) => searchableString.contains(token));
       }).toList();
     }
-
     filteredStudents = tempList.take(50).toList(); 
     notifyListeners();
   }
@@ -161,47 +248,65 @@ class LabState extends ChangeNotifier {
 
   Future<void> issueTools() async {
     if (selectedStudent == null || cartItems.isEmpty) return;
-
     final now = DateTime.now();
     
-    await isar.writeTxn(() async {
+    if (!isWeb) {
+      // DESKTOP: Write to Isar
+      await isar!.writeTxn(() async {
+        for (var item in cartItems) {
+          final log = TransactionLog(
+            toolName: item,
+            issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+            timeBorrowed: now,
+            isGroupIssue: false,
+            isReturned: false,
+            isSynced: false,
+          );
+          await isar!.transactionLogs.put(log);
+        }
+      });
+    } else {
+      // WEB: Write directly to Supabase
+      final supabase = Supabase.instance.client;
       for (var item in cartItems) {
-        final log = TransactionLog(
-          toolName: item,
-          issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
-          timeBorrowed: now,
-          isGroupIssue: false,
-          isReturned: false,
-          isSynced: false, // Flag for Supabase Sync
-        );
-        await isar.transactionLogs.put(log);
+        await supabase.from('transaction_logs').insert({
+          'tool_name': item,
+          'issued_to': "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+          'is_group_issue': false,
+          'time_borrowed': now.toIso8601String(),
+          'is_returned': false,
+        });
       }
-    });
+    }
 
     clearSelection();
     await refreshData();
   }
 
   Future<void> returnTool(int logId) async {
-    await isar.writeTxn(() async {
-      final log = await isar.transactionLogs.get(logId);
-      if (log != null) {
-        log.isReturned = true;
-        log.timeReturned = DateTime.now();
-        log.isSynced = false; // Mark as unsynced so the return goes to Supabase
-        await isar.transactionLogs.put(log);
-      }
-    });
+    if (!isWeb) {
+      // DESKTOP: Update Isar
+      await isar!.writeTxn(() async {
+        final log = await isar!.transactionLogs.get(logId);
+        if (log != null) {
+          log.isReturned = true;
+          log.timeReturned = DateTime.now();
+          log.isSynced = false; 
+          await isar!.transactionLogs.put(log);
+        }
+      });
+    } else {
+      // WEB: Update Supabase directly
+      await Supabase.instance.client.from('transaction_logs').update({
+        'is_returned': true,
+        'time_returned': DateTime.now().toIso8601String()
+      }).eq('id', logId);
+    }
     await refreshData();
   }
 
-  // --- PDF BULK IMPORTER ---
   Future<int> bulkImportFromPdf(String className) async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf'],
-    );
-
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
     if (result == null || result.files.single.path == null) return -1; 
 
     final File file = File(result.files.single.path!);
@@ -213,46 +318,55 @@ class LabState extends ChangeNotifier {
     final RegExp admExp = RegExp(r'(DIM|MET5|ΜΕΤ5)\s*/\s*\d{4}\s*/\s*\d{2}', caseSensitive: false);
     final lines = rawText.split('\n');
     
-    await isar.writeTxn(() async {
-      for (int i = 0; i < lines.length; i++) {
-        final line = lines[i];
-        final match = admExp.firstMatch(line);
-        
-        if (match != null) {
-          final adm = match.group(0)!.replaceAll(RegExp(r'\s+'), '').toUpperCase();
-          var name = line.substring(match.end).replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim();
-          
-          if (name.isEmpty && i + 1 < lines.length) {
-              final nextLine = lines[i+1];
-              if (!admExp.hasMatch(nextLine)) {
-                  name = nextLine.replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim();
-              }
-          }
-          if (name.isEmpty) name = "Unknown Name";
+    if (!isWeb) {
+      // DESKTOP: Process with Isar
+      await isar!.writeTxn(() async {
+        for (int i = 0; i < lines.length; i++) {
+          final line = lines[i];
+          final match = admExp.firstMatch(line);
+          if (match != null) {
+            final adm = match.group(0)!.replaceAll(RegExp(r'\s+'), '').toUpperCase();
+            var name = line.substring(match.end).replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim();
+            if (name.isEmpty && i + 1 < lines.length) {
+                final nextLine = lines[i+1];
+                if (!admExp.hasMatch(nextLine)) { name = nextLine.replaceAll(RegExp(r'^[^a-zA-Z]+'), '').trim(); }
+            }
+            if (name.isEmpty) name = "Unknown Name";
 
-          final existing = await isar.students.filter().admNumberEqualTo(adm).findFirst();
-          if (existing == null) {
-            await isar.students.put(Student(admNumber: adm, name: name, groupName: className));
-            importedCount++;
-          } else {
-            existing.name = name != "Unknown Name" ? name : existing.name;
-            existing.groupName = className;
-            await isar.students.put(existing);
-            importedCount++;
+            final existing = await isar!.students.filter().admNumberEqualTo(adm).findFirst();
+            if (existing == null) {
+              await isar!.students.put(Student(admNumber: adm, name: name, groupName: className));
+              importedCount++;
+            } else {
+              existing.name = name != "Unknown Name" ? name : existing.name;
+              existing.groupName = className;
+              await isar!.students.put(existing);
+              importedCount++;
+            }
           }
         }
-      }
-    });
+      });
+    } else {
+      // WEB: PDF upload directly to Supabase isn't supported via local file picker in browser easily without converting to bytes. 
+      // It's highly recommended to do Bulk Imports on the Desktop app, then click Sync!
+    }
     
     selectedClassFilter = className;
     searchQuery = '';
-    
     await refreshData();
     return importedCount;
   }
 
-  // --- TWO-WAY SUPABASE CLOUD SYNC ---
   Future<void> syncWithCloud(BuildContext context) async {
+    if (isWeb) {
+      // If on the web, it's already live! Just refresh the data.
+      await refreshData();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Web Portal is Live! ☁️✅"), backgroundColor: Colors.green));
+      }
+      return;
+    }
+
     if (isSyncing) return;
     isSyncing = true;
     notifyListeners();
@@ -261,23 +375,23 @@ class LabState extends ChangeNotifier {
       final supabase = Supabase.instance.client;
 
       // 1. PUSH STUDENTS TO SUPABASE
-      final localStudents = await isar.students.where().findAll();
+      final localStudents = await isar!.students.where().findAll();
       for (var student in localStudents) {
         await supabase.from('students').upsert({
           'adm_number': student.admNumber,
           'name': student.name,
           'group_name': student.groupName,
-        }, onConflict: 'adm_number'); // Upsert prevents duplicates
+        }, onConflict: 'adm_number'); 
       }
 
       // 2. PULL STUDENTS FROM SUPABASE
       final cloudStudents = await supabase.from('students').select();
-      await isar.writeTxn(() async {
+      await isar!.writeTxn(() async {
         for (var row in cloudStudents) {
           final adm = row['adm_number'];
-          final existing = await isar.students.filter().admNumberEqualTo(adm).findFirst();
+          final existing = await isar!.students.filter().admNumberEqualTo(adm).findFirst();
           if (existing == null) {
-            await isar.students.put(Student(
+            await isar!.students.put(Student(
               admNumber: adm,
               name: row['name'],
               groupName: row['group_name']
@@ -287,7 +401,7 @@ class LabState extends ChangeNotifier {
       });
 
       // 3. PUSH UNSYNCED LOGS TO SUPABASE
-      final unsyncedLogs = await isar.transactionLogs.filter().isSyncedEqualTo(false).findAll();
+      final unsyncedLogs = await isar!.transactionLogs.filter().isSyncedEqualTo(false).findAll();
       for (var log in unsyncedLogs) {
         await supabase.from('transaction_logs').insert({
           'tool_name': log.toolName,
@@ -300,10 +414,10 @@ class LabState extends ChangeNotifier {
       }
 
       // Mark local logs as synced
-      await isar.writeTxn(() async {
+      await isar!.writeTxn(() async {
         for (var log in unsyncedLogs) {
           log.isSynced = true;
-          await isar.transactionLogs.put(log);
+          await isar!.transactionLogs.put(log);
         }
       });
 
