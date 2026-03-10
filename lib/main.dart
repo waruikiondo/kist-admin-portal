@@ -130,6 +130,7 @@ class LabState extends ChangeNotifier {
   String? selectedClassFilter; 
   
   bool isSyncing = false; 
+  bool isIssuing = false; // NEW: Tracks button loading state
 
   LabState(this.isar) {
     _init();
@@ -248,61 +249,95 @@ class LabState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> issueTools() async {
+  // UPDATED: Now requires BuildContext to show success/error snackbars
+  Future<void> issueTools(BuildContext context) async {
     if (selectedStudent == null || cartItems.isEmpty) return;
-    if (isStudentBlacklisted(selectedStudent!)) return; // Prevent issue if blacklisted
+    if (isStudentBlacklisted(selectedStudent!)) return;
+
+    isIssuing = true;
+    notifyListeners();
 
     final now = DateTime.now();
     
-    if (!isWeb) {
-      await isar!.writeTxn(() async {
-        for (var item in cartItems) {
-          final log = TransactionLog(
-            toolName: item,
-            issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
-            timeBorrowed: now,
-            isGroupIssue: false,
-            isReturned: false,
-            isSynced: false,
-          );
-          await isar!.transactionLogs.put(log);
-        }
-      });
-    } else {
-      final supabase = Supabase.instance.client;
-      for (var item in cartItems) {
-        await supabase.from('transaction_logs').insert({
-          'tool_name': item,
-          'issued_to': "${selectedStudent!.name} (${selectedStudent!.admNumber})",
-          'is_group_issue': false,
-          'time_borrowed': now.toIso8601String(),
-          'is_returned': false,
+    try {
+      if (!isWeb) {
+        await isar!.writeTxn(() async {
+          for (var item in cartItems) {
+            final log = TransactionLog(
+              toolName: item,
+              issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+              timeBorrowed: now,
+              isGroupIssue: false,
+              isReturned: false,
+              isSynced: false,
+            );
+            await isar!.transactionLogs.put(log);
+          }
         });
+      } else {
+        final supabase = Supabase.instance.client;
+        for (var item in cartItems) {
+          await supabase.from('transaction_logs').insert({
+            'tool_name': item,
+            'issued_to': "${selectedStudent!.name} (${selectedStudent!.admNumber})",
+            'is_group_issue': false,
+            'time_borrowed': now.toIso8601String(),
+            'is_returned': false,
+          });
+        }
       }
-    }
 
-    clearSelection();
-    await refreshData();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Tools Issued Successfully! ✅"), backgroundColor: Colors.green)
+        );
+      }
+      clearSelection();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to issue tools: $e"), backgroundColor: Colors.red)
+        );
+      }
+    } finally {
+      isIssuing = false;
+      await refreshData();
+    }
   }
 
-  Future<void> returnTool(int logId) async {
-    if (!isWeb) {
-      await isar!.writeTxn(() async {
-        final log = await isar!.transactionLogs.get(logId);
-        if (log != null) {
-          log.isReturned = true;
-          log.timeReturned = DateTime.now();
-          log.isSynced = false; 
-          await isar!.transactionLogs.put(log);
-        }
-      });
-    } else {
-      await Supabase.instance.client.from('transaction_logs').update({
-        'is_returned': true,
-        'time_returned': DateTime.now().toIso8601String()
-      }).eq('id', logId);
+  // UPDATED: Now requires BuildContext to handle errors gracefully
+  Future<void> returnTool(BuildContext context, int logId) async {
+    try {
+      if (!isWeb) {
+        await isar!.writeTxn(() async {
+          final log = await isar!.transactionLogs.get(logId);
+          if (log != null) {
+            log.isReturned = true;
+            log.timeReturned = DateTime.now();
+            log.isSynced = false; 
+            await isar!.transactionLogs.put(log);
+          }
+        });
+      } else {
+        await Supabase.instance.client.from('transaction_logs').update({
+          'is_returned': true,
+          'time_returned': DateTime.now().toIso8601String()
+        }).eq('id', logId);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Item returned to inventory!"), backgroundColor: Colors.green)
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to return item: $e"), backgroundColor: Colors.red)
+        );
+      }
+    } finally {
+      await refreshData();
     }
-    await refreshData();
   }
 
   Future<int> bulkImportFromPdf(String className) async {
@@ -530,19 +565,60 @@ class DesktopPosLayout extends StatelessWidget {
   }
 }
 
-// --- MOBILE LAYOUT ---
-class MobilePosLayout extends StatelessWidget {
+// --- NEW RESPONSIVE MOBILE LAYOUT ---
+class MobilePosLayout extends StatefulWidget {
   const MobilePosLayout({super.key});
+
+  @override
+  State<MobilePosLayout> createState() => _MobilePosLayoutState();
+}
+
+class _MobilePosLayoutState extends State<MobilePosLayout> {
+  int _currentIndex = 0;
+
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Expanded(flex: 2, child: SmartSearchPanel()),
-        Divider(height: 1, thickness: 2),
-        Expanded(flex: 3, child: ToolEntryPanel()),
-        Divider(height: 1, thickness: 2),
-        Expanded(flex: 4, child: CartAndLoansPanel()),
-      ],
+    final state = context.watch<LabState>();
+    int cartCount = state.cartItems.length;
+
+    return Scaffold(
+      // IndexedStack keeps the state (like text input) alive when switching tabs
+      body: SafeArea(
+        child: IndexedStack(
+          index: _currentIndex,
+          children: const [
+            SmartSearchPanel(),
+            ToolEntryPanel(),
+            CartAndLoansPanel(),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        selectedItemColor: const Color(0xFFD32F2F),
+        unselectedItemColor: Colors.grey.shade600,
+        backgroundColor: Colors.white,
+        elevation: 10,
+        items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person_search), 
+            label: "Student"
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.build), 
+            label: "Tools"
+          ),
+          BottomNavigationBarItem(
+            icon: Badge(
+              isLabelVisible: cartCount > 0,
+              label: Text('$cartCount'),
+              child: const Icon(Icons.shopping_cart_checkout),
+            ),
+            label: "Checkout",
+          ),
+        ],
+      ),
     );
   }
 }
@@ -817,7 +893,6 @@ class CartAndLoansPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<LabState>();
     
-    // Determine if the issue button should be enabled
     bool isStudentSelected = state.selectedStudent != null;
     bool hasItemsInCart = state.cartItems.isNotEmpty;
     bool isBlacklisted = isStudentSelected && state.isStudentBlacklisted(state.selectedStudent!);
@@ -852,10 +927,12 @@ class CartAndLoansPanel extends StatelessWidget {
                     backgroundColor: isBlacklisted ? Colors.grey : const Color(0xFFD32F2F), 
                     foregroundColor: Colors.white
                   ),
-                  onPressed: canIssue ? state.issueTools : null,
-                  icon: Icon(isBlacklisted ? Icons.block : Icons.check_circle),
+                  onPressed: canIssue && !state.isIssuing ? () => state.issueTools(context) : null,
+                  icon: state.isIssuing 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Icon(isBlacklisted ? Icons.block : Icons.check_circle),
                   label: Text(
-                    isBlacklisted ? "STUDENT BLACKLISTED" : "ISSUE ITEMS", 
+                    isBlacklisted ? "STUDENT BLACKLISTED" : (state.isIssuing ? "ISSUING..." : "ISSUE ITEMS"), 
                     style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
                   ),
                 ),
@@ -905,7 +982,7 @@ class CartAndLoansPanel extends StatelessWidget {
                         title: Text(loan.issuedTo.isNotEmpty ? loan.issuedTo : "Unknown Student", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         subtitle: Text(loan.toolName, style: const TextStyle(color: Color(0xFFD32F2F))),
                         trailing: ElevatedButton(
-                          onPressed: () => state.returnTool(loan.id),
+                          onPressed: () => state.returnTool(context, loan.id),
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.green.shade50, foregroundColor: Colors.green.shade700, elevation: 0),
                           child: const Text("RETURN"),
                         ),
