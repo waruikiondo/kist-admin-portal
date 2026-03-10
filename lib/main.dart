@@ -132,7 +132,7 @@ class LabState extends ChangeNotifier {
   bool isSyncing = false; 
   bool isIssuing = false; 
   
-  // NEW: Global tracker for Mobile Navigation
+  // Tracker for Mobile Navigation
   int mobileTabIndex = 0;
 
   LabState(this.isar) {
@@ -181,9 +181,9 @@ class LabState extends ChangeNotifier {
         activeLoans = logRes.map((l) {
           final log = TransactionLog(
             toolName: l['tool_name'],
-            issuedTo: l['issued_to'],
+            // Fallback securely if issued_to is null
+            issuedTo: l['issued_to'] ?? l['student_name'] ?? 'Unknown',
             timeBorrowed: DateTime.parse(l['time_borrowed']),
-            isGroupIssue: l['is_group_issue'] ?? false,
             isReturned: false,
             isSynced: true,
           );
@@ -237,21 +237,21 @@ class LabState extends ChangeNotifier {
   void selectStudent(Student s) {
     selectedStudent = s;
     searchQuery = '';
-    mobileTabIndex = 1; // Auto-navigate to Tools tab on Mobile
+    mobileTabIndex = 1; // Auto-navigate to Tools tab
     notifyListeners();
   }
 
   void clearSelection() {
     selectedStudent = null;
     cartItems.clear();
-    mobileTabIndex = 0; // Auto-navigate to Search tab on Mobile
+    mobileTabIndex = 0; // Auto-navigate back to Search
     notifyListeners();
   }
 
   void addToCart(String item) {
     if (item.trim().isNotEmpty) {
       cartItems.add(item.trim());
-      mobileTabIndex = 2; // Auto-navigate to Checkout tab on Mobile
+      mobileTabIndex = 2; // Auto-navigate to Checkout tab
       notifyListeners();
     }
   }
@@ -278,7 +278,6 @@ class LabState extends ChangeNotifier {
               toolName: item,
               issuedTo: "${selectedStudent!.name} (${selectedStudent!.admNumber})",
               timeBorrowed: now,
-              isGroupIssue: false,
               isReturned: false,
               isSynced: false,
             );
@@ -288,12 +287,14 @@ class LabState extends ChangeNotifier {
       } else {
         final supabase = Supabase.instance.client;
         for (var item in cartItems) {
-          // FIX: Removed 'is_group_issue' to prevent the PostgrestException crash
+          // --- PERFECTLY MAPPED TO YOUR SUPABASE SCHEMA ---
           await supabase.from('transaction_logs').insert({
             'tool_name': item,
+            'student_name': selectedStudent!.name, // This was causing the crash!
             'issued_to': "${selectedStudent!.name} (${selectedStudent!.admNumber})",
             'time_borrowed': now.toIso8601String(),
             'is_returned': false,
+            'status': 'GOOD' // Explicitly honoring your schema
           });
         }
       }
@@ -303,7 +304,8 @@ class LabState extends ChangeNotifier {
           const SnackBar(content: Text("Tools Issued Successfully! ✅"), backgroundColor: Colors.green)
         );
       }
-      clearSelection(); // This clears the cart AND auto-routes back to Tab 0
+      // This will automatically clear the cart AND route the mobile UI back to the Student Search tab
+      clearSelection(); 
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -440,13 +442,15 @@ class LabState extends ChangeNotifier {
 
       final unsyncedLogs = await isar!.transactionLogs.filter().isSyncedEqualTo(false).findAll();
       for (var log in unsyncedLogs) {
-        // FIX: Removed 'is_group_issue' to prevent the PostgrestException crash
+        // --- EXACT MAPPING FOR SYNC ---
         await supabase.from('transaction_logs').insert({
           'tool_name': log.toolName,
+          'student_name': log.issuedTo, 
           'issued_to': log.issuedTo,
           'time_borrowed': log.timeBorrowed.toIso8601String(),
           'is_returned': log.isReturned,
           'time_returned': log.timeReturned?.toIso8601String(),
+          'status': 'GOOD'
         });
       }
 
@@ -575,7 +579,7 @@ class DesktopPosLayout extends StatelessWidget {
   }
 }
 
-// --- NEW RESPONSIVE MOBILE LAYOUT ---
+// --- RESPONSIVE MOBILE LAYOUT ---
 class MobilePosLayout extends StatelessWidget {
   const MobilePosLayout({super.key});
 
@@ -586,7 +590,6 @@ class MobilePosLayout extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        // IndexedStack seamlessly flips between panels without losing state
         child: IndexedStack(
           index: state.mobileTabIndex,
           children: const [
