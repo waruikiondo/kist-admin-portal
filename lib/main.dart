@@ -130,7 +130,10 @@ class LabState extends ChangeNotifier {
   String? selectedClassFilter; 
   
   bool isSyncing = false; 
-  bool isIssuing = false; // NEW: Tracks button loading state
+  bool isIssuing = false; 
+  
+  // NEW: Global tracker for Mobile Navigation
+  int mobileTabIndex = 0;
 
   LabState(this.isar) {
     _init();
@@ -138,6 +141,12 @@ class LabState extends ChangeNotifier {
 
   Future<void> _init() async {
     await refreshData();
+  }
+
+  // --- MOBILE NAVIGATION LOGIC ---
+  void setMobileTab(int index) {
+    mobileTabIndex = index;
+    notifyListeners();
   }
 
   // --- BLACKLIST LOGIC ---
@@ -228,18 +237,21 @@ class LabState extends ChangeNotifier {
   void selectStudent(Student s) {
     selectedStudent = s;
     searchQuery = '';
+    mobileTabIndex = 1; // Auto-navigate to Tools tab on Mobile
     notifyListeners();
   }
 
   void clearSelection() {
     selectedStudent = null;
     cartItems.clear();
+    mobileTabIndex = 0; // Auto-navigate to Search tab on Mobile
     notifyListeners();
   }
 
   void addToCart(String item) {
     if (item.trim().isNotEmpty) {
       cartItems.add(item.trim());
+      mobileTabIndex = 2; // Auto-navigate to Checkout tab on Mobile
       notifyListeners();
     }
   }
@@ -249,7 +261,6 @@ class LabState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // UPDATED: Now requires BuildContext to show success/error snackbars
   Future<void> issueTools(BuildContext context) async {
     if (selectedStudent == null || cartItems.isEmpty) return;
     if (isStudentBlacklisted(selectedStudent!)) return;
@@ -277,10 +288,10 @@ class LabState extends ChangeNotifier {
       } else {
         final supabase = Supabase.instance.client;
         for (var item in cartItems) {
+          // FIX: Removed 'is_group_issue' to prevent the PostgrestException crash
           await supabase.from('transaction_logs').insert({
             'tool_name': item,
             'issued_to': "${selectedStudent!.name} (${selectedStudent!.admNumber})",
-            'is_group_issue': false,
             'time_borrowed': now.toIso8601String(),
             'is_returned': false,
           });
@@ -292,7 +303,7 @@ class LabState extends ChangeNotifier {
           const SnackBar(content: Text("Tools Issued Successfully! ✅"), backgroundColor: Colors.green)
         );
       }
-      clearSelection();
+      clearSelection(); // This clears the cart AND auto-routes back to Tab 0
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -305,7 +316,6 @@ class LabState extends ChangeNotifier {
     }
   }
 
-  // UPDATED: Now requires BuildContext to handle errors gracefully
   Future<void> returnTool(BuildContext context, int logId) async {
     try {
       if (!isWeb) {
@@ -430,10 +440,10 @@ class LabState extends ChangeNotifier {
 
       final unsyncedLogs = await isar!.transactionLogs.filter().isSyncedEqualTo(false).findAll();
       for (var log in unsyncedLogs) {
+        // FIX: Removed 'is_group_issue' to prevent the PostgrestException crash
         await supabase.from('transaction_logs').insert({
           'tool_name': log.toolName,
           'issued_to': log.issuedTo,
-          'is_group_issue': log.isGroupIssue,
           'time_borrowed': log.timeBorrowed.toIso8601String(),
           'is_returned': log.isReturned,
           'time_returned': log.timeReturned?.toIso8601String(),
@@ -566,15 +576,8 @@ class DesktopPosLayout extends StatelessWidget {
 }
 
 // --- NEW RESPONSIVE MOBILE LAYOUT ---
-class MobilePosLayout extends StatefulWidget {
+class MobilePosLayout extends StatelessWidget {
   const MobilePosLayout({super.key});
-
-  @override
-  State<MobilePosLayout> createState() => _MobilePosLayoutState();
-}
-
-class _MobilePosLayoutState extends State<MobilePosLayout> {
-  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -582,10 +585,10 @@ class _MobilePosLayoutState extends State<MobilePosLayout> {
     int cartCount = state.cartItems.length;
 
     return Scaffold(
-      // IndexedStack keeps the state (like text input) alive when switching tabs
       body: SafeArea(
+        // IndexedStack seamlessly flips between panels without losing state
         child: IndexedStack(
-          index: _currentIndex,
+          index: state.mobileTabIndex,
           children: const [
             SmartSearchPanel(),
             ToolEntryPanel(),
@@ -594,8 +597,8 @@ class _MobilePosLayoutState extends State<MobilePosLayout> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        currentIndex: state.mobileTabIndex,
+        onTap: (index) => state.setMobileTab(index),
         selectedItemColor: const Color(0xFFD32F2F),
         unselectedItemColor: Colors.grey.shade600,
         backgroundColor: Colors.white,
